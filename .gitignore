@@ -1,0 +1,47 @@
+# Binaries & Executables
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+
+# Scratch & Temporary Testing Files
+scratch/
+*.tmp
+*.log
+
+# Test & Coverage Artifacts
+*.out
+coverage.html
+coverage/
+
+# Environment Files (Keep .env.example)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Node & Next.js Build Artifacts
+node_modules/
+web/node_modules/
+web/.next/
+web/out/
+web/build/
+web/*.tsbuildinfo
+web/npm-debug.log*
+web/yarn-debug.log*
+web/yarn-error.log*
+web/.pnpm-debug.log*
+web/.env*.local
+
+# Database Data Volumes (when running outside docker)
+*.sqlite
+*.sqlite3
+
+# IDE & OS Metadata
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

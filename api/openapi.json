@@ -1,0 +1,407 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Whoopit Inventory Platform (v4) Core API",
+    "version": "4.0.0",
+    "description": "Enterprise Multi-Tenant SaaS Engine unifying Office IT Asset Custody, Warehouse Logistics with FEFO, Point-of-Sale Retail, and Industrial Factory Operations with PostgreSQL native Row-Level Security (RLS) and Odoo-style Double-Entry Movement Ledger."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Local Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "TenantHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Tenant-ID",
+        "description": "Mandatory UUID identifying the organization tenant context."
+      }
+    },
+    "schemas": {
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string" },
+          "title": { "type": "string" },
+          "status": { "type": "integer" },
+          "detail": { "type": "string" },
+          "instance": { "type": "string" },
+          "errors": { "type": "array", "items": { "type": "object" } }
+        }
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "type": "object" },
+          "meta": { "type": "object" }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "TenantHeader": []
+    }
+  ],
+  "paths": {
+    "/api/v1/locations": {
+      "post": {
+        "summary": "Create Location",
+        "tags": ["Catalog & Locations"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "category"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "category": { "type": "string", "enum": ["physical_warehouse", "physical_office", "virtual_vendor", "virtual_customer", "virtual_scrap", "virtual_custody", "virtual_production"] },
+                  "parent_id": { "type": "string", "format": "uuid" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Location created successfully" },
+          "422": { "description": "Validation error" }
+        }
+      },
+      "get": {
+        "summary": "List Locations",
+        "tags": ["Catalog & Locations"],
+        "responses": {
+          "200": { "description": "List of tenant locations" }
+        }
+      }
+    },
+    "/api/v1/items": {
+      "post": {
+        "summary": "Create Item with Dynamic Industry Profile Validation",
+        "tags": ["Catalog & Locations"],
+        "parameters": [
+          { "name": "profile", "in": "query", "required": false, "schema": { "type": "string", "enum": ["office_it", "warehouse", "retail", "factory"] } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["sku", "name", "tracking_mode"],
+                "properties": {
+                  "sku": { "type": "string" },
+                  "name": { "type": "string" },
+                  "tracking_mode": { "type": "string", "enum": ["none", "serialized", "bulk", "batch"] },
+                  "base_uom": { "type": "string", "default": "unit" },
+                  "valuation_method": { "type": "string", "enum": ["fifo", "wac"], "default": "fifo" },
+                  "attributes": { "type": "object" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Item created successfully" },
+          "422": { "description": "JSON Schema attribute validation failure" }
+        }
+      }
+    },
+    "/api/v1/items/{id}": {
+      "get": {
+        "summary": "Get Item by ID",
+        "tags": ["Catalog & Locations"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Item retrieved" },
+          "404": { "description": "Item not found or belongs to another tenant" }
+        }
+      }
+    },
+    "/api/v1/items/search": {
+      "post": {
+        "summary": "Search Items by JSONB Attributes (GIN jsonb_path_ops)",
+        "tags": ["Catalog & Locations"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["attributes"],
+                "properties": {
+                  "attributes": { "type": "object" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Matched items" }
+        }
+      }
+    },
+    "/api/v1/stock/moves": {
+      "post": {
+        "summary": "Execute Atomic Two-Sided Stock Movement",
+        "tags": ["Stock Ledger"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["item_id", "from_location_id", "to_location_id", "quantity", "move_type"],
+                "properties": {
+                  "item_id": { "type": "string", "format": "uuid" },
+                  "from_location_id": { "type": "string", "format": "uuid" },
+                  "to_location_id": { "type": "string", "format": "uuid" },
+                  "quantity": { "type": "number", "minimum": 0.0001 },
+                  "move_type": { "type": "string" },
+                  "reference_code": { "type": "string" },
+                  "lines": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["tracking_number", "quantity"],
+                      "properties": {
+                        "tracking_number": { "type": "string" },
+                        "quantity": { "type": "number" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Stock move completed" },
+          "422": { "description": "Insufficient stock or line validation failure" }
+        }
+      },
+      "get": {
+        "summary": "List Stock Movement Ledger",
+        "tags": ["Stock Ledger"],
+        "responses": {
+          "200": { "description": "Ledger movement records" }
+        }
+      }
+    },
+    "/api/v1/stock/locations/{location_id}/balance": {
+      "get": {
+        "summary": "Calculate On-Hand Location Balance via Two-Sided Ledger",
+        "tags": ["Stock Ledger"],
+        "parameters": [
+          { "name": "location_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "item_id", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Computed on-hand balance" }
+        }
+      }
+    },
+    "/api/v1/stock/reserve": {
+      "post": {
+        "summary": "Valkey High-Velocity Atomic Stock Reservation",
+        "tags": ["Stock Ledger"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["item_id", "location_id", "quantity"],
+                "properties": {
+                  "item_id": { "type": "string", "format": "uuid" },
+                  "location_id": { "type": "string", "format": "uuid" },
+                  "quantity": { "type": "integer", "minimum": 1 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Stock reserved atomically with 5-minute TTL token" },
+          "422": { "description": "Reservation denied due to insufficient cached stock" }
+        }
+      }
+    },
+    "/api/v1/assets/checkout": {
+      "post": {
+        "summary": "Deploy Serialized Asset to Employee Custody",
+        "tags": ["IT Asset Custody (ITAM)"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["asset_id", "employee_user_id"],
+                "properties": {
+                  "asset_id": { "type": "string", "format": "uuid" },
+                  "employee_user_id": { "type": "string", "format": "uuid" },
+                  "source_location_id": { "type": "string", "format": "uuid" },
+                  "condition_grade": { "type": "string", "default": "A" },
+                  "expected_return_date": { "type": "string", "format": "date-time" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Asset checked out and moved into Virtual/Custody" },
+          "409": { "description": "Asset is already assigned to another employee (Anti-Double Assignment Guard)" }
+        }
+      }
+    },
+    "/api/v1/assets/checkin": {
+      "post": {
+        "summary": "Return Asset from Custody to Physical Storage",
+        "tags": ["IT Asset Custody (ITAM)"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["assignment_id", "return_to_location_id"],
+                "properties": {
+                  "assignment_id": { "type": "string", "format": "uuid" },
+                  "return_to_location_id": { "type": "string", "format": "uuid" },
+                  "condition_grade": { "type": "string", "default": "A" },
+                  "notes": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Asset checked in and moved back to physical location" }
+        }
+      }
+    },
+    "/api/v1/assets/custody/employee/{user_id}": {
+      "get": {
+        "summary": "List Active Hardware Assets Deployed to Employee",
+        "tags": ["IT Asset Custody (ITAM)"],
+        "parameters": [
+          { "name": "user_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "List of active assets" }
+        }
+      }
+    },
+    "/api/v1/assets/summary": {
+      "get": {
+        "summary": "Get Overall IT Asset Custody Metric Summary",
+        "tags": ["IT Asset Custody (ITAM)"],
+        "responses": {
+          "200": { "description": "Total assets, deployed to employees, and remaining in storage" }
+        }
+      }
+    },
+    "/api/v1/assets/assignments/{id}/certificate": {
+      "get": {
+        "summary": "Get Tamper-Evident Handover Certificate & Hash Chain Proof",
+        "tags": ["IT Asset Custody (ITAM)"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Certificate and cryptographic hash chain verification status" },
+          "404": { "description": "Certificate or assignment not found" }
+        }
+      }
+    },
+    "/api/v1/warehouse/lots": {
+      "post": {
+        "summary": "Register Batch / Lot with Expiration Date",
+        "tags": ["Warehouse Logistics & FEFO"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["item_id", "tracking_number", "expiration_date"],
+                "properties": {
+                  "item_id": { "type": "string", "format": "uuid" },
+                  "tracking_number": { "type": "string" },
+                  "expiration_date": { "type": "string", "format": "date-time" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Lot registered" }
+        }
+      }
+    },
+    "/api/v1/warehouse/dispatch-fefo": {
+      "post": {
+        "summary": "First-Expired, First-Out (FEFO) Picking & Dispatch",
+        "tags": ["Warehouse Logistics & FEFO"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["item_id", "from_location_id", "to_location_id", "quantity"],
+                "properties": {
+                  "item_id": { "type": "string", "format": "uuid" },
+                  "from_location_id": { "type": "string", "format": "uuid" },
+                  "to_location_id": { "type": "string", "format": "uuid" },
+                  "quantity": { "type": "number" },
+                  "reference_code": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "FEFO lots allocated and stock move executed" },
+          "422": { "description": "Insufficient lot stock" }
+        }
+      }
+    },
+    "/api/v1/retail/sell": {
+      "post": {
+        "summary": "Fast Point-of-Sale (POS) Stock Deduction by Barcode or SKU",
+        "tags": ["Retail Point-of-Sale"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["sku_or_barcode", "quantity", "store_location_id"],
+                "properties": {
+                  "sku_or_barcode": { "type": "string" },
+                  "quantity": { "type": "number" },
+                  "store_location_id": { "type": "string", "format": "uuid" },
+                  "receipt_id": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Stock sold to virtual_customer and remaining shelf balance returned" },
+          "422": { "description": "Insufficient store shelf stock" }
+        }
+      }
+    }
+  }
+}

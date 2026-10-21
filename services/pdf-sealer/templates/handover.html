@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>IT Asset Custody Handover Agreement</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm;
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 8pt;
+                color: #666;
+            }
+        }
+        body {
+            font-family: 'DejaVu Sans', 'Noto Sans', sans-serif;
+            color: #1e293b;
+            line-height: 1.5;
+            font-size: 10pt;
+        }
+        .urdu {
+            font-family: 'Noto Nastaliq Urdu', 'DejaVu Sans', sans-serif;
+            direction: rtl;
+            unicode-bidi: embed;
+            color: #475569;
+            font-size: 9pt;
+        }
+        .header {
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 18pt;
+            margin: 0;
+            color: #0f172a;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .header .subtitle {
+            font-size: 11pt;
+            color: #3b82f6;
+            margin-top: 4px;
+        }
+        .meta-grid {
+            display: table;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .meta-row {
+            display: table-row;
+        }
+        .meta-cell {
+            display: table-cell;
+            padding: 4px 8px;
+            font-size: 9pt;
+        }
+        .meta-label {
+            font-weight: bold;
+            color: #64748b;
+            width: 25%;
+        }
+        .section-title {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #0f172a;
+            background-color: #f1f5f9;
+            padding: 6px 10px;
+            border-left: 4px solid #3b82f6;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        table.data-table th, table.data-table td {
+            border: 1px solid #cbd5e1;
+            padding: 8px 10px;
+            text-align: left;
+        }
+        table.data-table th {
+            background-color: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+        }
+        .terms-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-top: 15px;
+            font-size: 8.5pt;
+        }
+        .signature-section {
+            margin-top: 30px;
+            display: table;
+            width: 100%;
+        }
+        .signature-block {
+            display: table-cell;
+            width: 50%;
+            vertical-align: top;
+            padding-right: 20px;
+        }
+        .signature-line {
+            border-bottom: 1px solid #0f172a;
+            height: 60px;
+            margin-bottom: 6px;
+        }
+        .badge {
+            display: inline-block;
+            background-color: #10b981;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 8pt;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>IT Asset Handover Certificate</h1>
+        <div class="subtitle">Official Equipment Custody & Responsibility Agreement</div>
+        <div class="urdu">سامان کی باضابطہ حوالگی اور ذمہ داری کا قانونی معاہدہ</div>
+    </div>
+
+    <div class="meta-grid">
+        <div class="meta-row">
+            <div class="meta-cell meta-label">Organization ID / ادارہ:</div>
+            <div class="meta-cell">{{ org_id }}</div>
+            <div class="meta-cell meta-label">Checkout Date / تاریخ:</div>
+            <div class="meta-cell">{{ checkout_date }}</div>
+        </div>
+        <div class="meta-row">
+            <div class="meta-cell meta-label">Assignment ID:</div>
+            <div class="meta-cell"><code>{{ assignment_id }}</code></div>
+            <div class="meta-cell meta-label">Condition Grade:</div>
+            <div class="meta-cell"><span class="badge">Grade {{ condition }}</span></div>
+        </div>
+    </div>
+
+    <div class="section-title">1. Employee & Custodian Details / ملازم کی تفصیلات</div>
+    <table class="data-table">
+        <tr>
+            <th>Employee Name / ملازم کا نام</th>
+            <td>{{ employee_name }}</td>
+            <th>Employee ID / شناختی کوڈ</th>
+            <td>{{ employee_id }}</td>
+        </tr>
+    </table>
+
+    <div class="section-title">2. Deployed Equipment Specification / سازوسامان کی تفصیلات</div>
+    <table class="data-table">
+        <tr>
+            <th>Asset SKU</th>
+            <td><strong>{{ asset_sku }}</strong></td>
+            <th>Asset Model / Name</th>
+            <td>{{ asset_name }}</td>
+        </tr>
+        <tr>
+            <th>Serial Number / سیریل نمبر</th>
+            <td colspan="3"><code>{{ serial_number }}</code></td>
+        </tr>
+    </table>
+
+    {% if specs %}
+    <div class="section-title">3. Hardware Configuration & Specifications</div>
+    <table class="data-table">
+        {% for k, v in specs.items() %}
+        <tr>
+            <th style="width: 35%;">{{ k }}</th>
+            <td>{{ v }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+
+    <div class="section-title">4. Handover Terms & Legal Custody / شرائط و ضوابط</div>
+    <div class="terms-box">
+        <p><strong>English:</strong> The recipient acknowledges receipt of the equipment listed above in verified working condition. The employee agrees to use the asset strictly for business activities and return it in the recorded condition grade upon request or separation.</p>
+        <div class="urdu">
+            <strong>اردو:</strong> وصول کنندہ مذکورہ بالا سامان کی مکمل درست اور تسلی بخش حالت میں وصولی کا اعتراف کرتا ہے۔ ملازم اس بات کا پابند ہے کہ وہ اس سامان کو دفتری اور پیشہ ورانہ مقاصد کے لیے استعمال کرے گا اور واپسی کے وقت اسی حالت میں جمع کروائے گا۔
+        </div>
+    </div>
+
+    <div class="signature-section">
+        <div class="signature-block">
+            <div class="signature-line">
+                {% if signature_svg_or_png %}
+                <img src="{{ signature_svg_or_png }}" style="max-height: 55px;" alt="Signature" />
+                {% endif %}
+            </div>
+            <strong>Employee Signature / دستخط ملازم</strong><br>
+            <span style="font-size: 8pt; color: #64748b;">{{ employee_name }} ({{ employee_id }})</span>
+        </div>
+        <div class="signature-block">
+            <div class="signature-line" style="border-bottom: 1px dashed #64748b; padding-top: 25px; text-align: center; color: #10b981; font-weight: bold; font-size: 9pt;">
+                ✓ DIGITALLY SEALED & VERIFIED (PAdES)
+            </div>
+            <strong>Authorized IT Custody Officer</strong><br>
+            <span style="font-size: 8pt; color: #64748b;">Whoopit Platform Cryptographic Sealer</span>
+        </div>
+    </div>
+</body>
+</html>
