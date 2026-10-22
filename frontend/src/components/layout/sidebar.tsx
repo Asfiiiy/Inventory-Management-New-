@@ -16,6 +16,8 @@ import {
   AlertTriangle,
   Lock,
   ShieldCheck,
+  FileSpreadsheet,
+  Sliders,
 } from "lucide-react";
 import { useInventory } from "@/lib/inventory-store";
 import { useAuth } from "@/lib/auth-context";
@@ -73,6 +75,19 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       href: "/contacts",
       icon: Users,
       color: "text-purple-500",
+    },
+    {
+      label: "CSV Bulk Import",
+      href: "/import",
+      icon: FileSpreadsheet,
+      color: "text-emerald-500",
+    },
+    {
+      label: "Custom Field Builder",
+      href: "/settings/custom-fields",
+      icon: Sliders,
+      color: "text-fuchsia-500",
+      restricted: isStaff,
     },
   ];
 

@@ -97,11 +97,16 @@ async function request<T>(
   const tenantId = getTenantId();
   const token = getAuthToken();
 
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
     "X-Tenant-ID": tenantId,
     ...(options.headers as Record<string, string>),
   };
+
+  if (!isFormData && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
 
   // Inject Bearer token automatically if available
   if (token) {
@@ -191,6 +196,14 @@ export const apiClient = {
       request<{ success: boolean; data: any[]; meta: { count: number } }>("/api/v1/items/search", {
         method: "POST",
         body: JSON.stringify({ attributes }),
+      }),
+    importCSV: (formData: FormData, dryRun: boolean = false) =>
+      request<{
+        success: boolean;
+        data: CSVImportResult;
+      }>(`/api/v1/items/import-csv?dry_run=${dryRun ? "true" : "false"}`, {
+        method: "POST",
+        body: formData,
       }),
   },
 
@@ -328,6 +341,27 @@ export const apiClient = {
         `/api/v1/assets/assignments/${assignmentId}/certificate`
       ),
   },
+
+  customFields: {
+    list: () =>
+      request<{ success: boolean; data: CustomFieldDefinition[]; meta?: { count: number } }>(
+        "/api/v1/custom-fields"
+      ),
+    create: (body: {
+      field_name: string;
+      field_type: string;
+      dropdown_options?: string[];
+      is_required: boolean;
+    }) =>
+      request<{ success: boolean; data: CustomFieldDefinition }>("/api/v1/custom-fields", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    delete: (id: string) =>
+      request<{ success: boolean; data: any }>(`/api/v1/custom-fields/${id}`, {
+        method: "DELETE",
+      }),
+  },
 };
 
 export interface CustodySummary {
@@ -365,5 +399,22 @@ export interface HandoverCertificate {
   tamper_detected: boolean;
   computed_hash: string;
   stored_hash: string;
+}
+
+export interface CustomFieldDefinition {
+  field_id: string;
+  org_id: string;
+  field_name: string;
+  field_type: "text" | "number" | "decimal" | "date" | "dropdown" | "boolean" | "barcode" | string;
+  dropdown_options: string[];
+  is_required: boolean;
+  created_at: string;
+}
+
+export interface CSVImportResult {
+  total_rows: number;
+  imported: number;
+  dry_run: boolean;
+  errors?: Array<{ row: number; field: string; error: string }>;
 }
 
