@@ -277,5 +277,93 @@ export const apiClient = {
         method: "POST",
       }),
   },
+
+  users: {
+    list: () => request<{ success: boolean; data: UserProfile[]; meta?: { count: number } }>("/api/v1/users"),
+  },
+
+  custody: {
+    getSummary: () =>
+      request<{ success: boolean; data: CustodySummary }>("/api/v1/assets/summary"),
+    listEmployeeCustody: (userId: string) =>
+      request<{ success: boolean; data: CustodyAssignment[]; meta?: { count: number } }>(
+        `/api/v1/assets/custody/employee/${userId}`
+      ),
+    checkout: (body: {
+      asset_id: string;
+      employee_user_id: string;
+      source_location_id: string;
+      expected_return_date?: string;
+      condition_grade?: string;
+    }) =>
+      request<{
+        success: boolean;
+        data: {
+          assignment: CustodyAssignment;
+          move?: any;
+          evidence?: any;
+        };
+      }>("/api/v1/assets/checkout", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    checkin: (body: {
+      assignment_id: string;
+      return_to_location_id: string;
+      condition_grade?: string;
+      notes?: string;
+    }) =>
+      request<{
+        success: boolean;
+        data: {
+          assignment: CustodyAssignment;
+          move?: any;
+        };
+      }>("/api/v1/assets/checkin", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    getCertificate: (assignmentId: string) =>
+      request<{ success: boolean; data: HandoverCertificate }>(
+        `/api/v1/assets/assignments/${assignmentId}/certificate`
+      ),
+  },
 };
+
+export interface CustodySummary {
+  total_assets: number;
+  deployed_to_employees: number;
+  remaining_in_storage: number;
+}
+
+export interface CustodyAssignment {
+  assignment_id: string;
+  org_id: string;
+  asset_id: string;
+  assigned_to_user_id: string;
+  checkout_date: string;
+  expected_return_date?: string | null;
+  returned_at?: string | null;
+  condition_grade: string;
+  asset_sku?: string;
+  asset_name?: string;
+  asset_attributes?: Record<string, any>;
+}
+
+export interface HandoverCertificate {
+  assignment: CustodyAssignment;
+  evidence: {
+    evidence_id: string;
+    org_id: string;
+    assignment_id: string;
+    pdf_sha256: string;
+    record_hash: string;
+    previous_hash: string;
+    created_at: string;
+  };
+  is_valid: boolean;
+  tamper_detected: boolean;
+  computed_hash: string;
+  stored_hash: string;
+}
 

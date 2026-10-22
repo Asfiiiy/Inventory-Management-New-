@@ -15,6 +15,7 @@ import {
   Boxes,
   AlertTriangle,
   Lock,
+  ShieldCheck,
 } from "lucide-react";
 import { useInventory } from "@/lib/inventory-store";
 import { useAuth } from "@/lib/auth-context";
@@ -53,6 +54,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       href: "/stock-out",
       icon: ArrowUpRight,
       color: "text-blue-500",
+    },
+    {
+      label: "Tool & Staff Custody",
+      href: "/custody",
+      icon: ShieldCheck,
+      color: "text-indigo-500",
     },
     {
       label: "Stock Adjustments",
