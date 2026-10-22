@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   FileSpreadsheet,
   Sliders,
+  Crown,
 } from "lucide-react";
 import { useInventory } from "@/lib/inventory-store";
 import { useAuth } from "@/lib/auth-context";
@@ -87,6 +88,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       href: "/settings/custom-fields",
       icon: Sliders,
       color: "text-fuchsia-500",
+      restricted: isStaff,
+    },
+    {
+      label: "SuperAdmin HQ",
+      href: "/superadmin",
+      icon: Crown,
+      color: "text-amber-500",
       restricted: isStaff,
     },
   ];

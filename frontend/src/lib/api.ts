@@ -362,6 +362,25 @@ export const apiClient = {
         method: "DELETE",
       }),
   },
+
+  superadmin: {
+    listOrganizations: () =>
+      request<{ success: boolean; data: OrganizationSummary[]; meta?: { count: number } }>(
+        "/api/v1/superadmin/organizations"
+      ),
+    getTelemetry: () =>
+      request<{ success: boolean; data: PlatformTelemetry }>("/api/v1/superadmin/telemetry"),
+    provisionOrganization: (body: ProvisionInput) =>
+      request<{ success: boolean; data: any }>("/api/v1/superadmin/organizations", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    updateOrganization: (id: string, body: { name?: string; plan?: string }) =>
+      request<{ success: boolean; data: any }>(`/api/v1/superadmin/organizations/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+  },
 };
 
 export interface CustodySummary {
@@ -416,5 +435,36 @@ export interface CSVImportResult {
   imported: number;
   dry_run: boolean;
   errors?: Array<{ row: number; field: string; error: string }>;
+}
+
+export interface OrganizationSummary {
+  org_id: string;
+  name: string;
+  slug: string;
+  plan: string;
+  created_at: string;
+  user_count: number;
+  item_count: number;
+  movement_count: number;
+  status: "active" | "suspended" | "trial" | string;
+}
+
+export interface PlatformTelemetry {
+  total_organizations: number;
+  total_users: number;
+  total_items: number;
+  total_movements: number;
+  active_enterprises: number;
+  active_standards: number;
+  active_trials: number;
+}
+
+export interface ProvisionInput {
+  name: string;
+  slug?: string;
+  plan?: string;
+  admin_name: string;
+  admin_email: string;
+  admin_password?: string;
 }
 

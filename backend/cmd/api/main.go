@@ -19,6 +19,7 @@ import (
 	"whoopit-core/internal/modules/inventory"
 	"whoopit-core/internal/modules/profiles"
 	"whoopit-core/internal/modules/retail"
+	"whoopit-core/internal/modules/superadmin"
 	"whoopit-core/internal/modules/warehouse"
 	"whoopit-core/internal/platform/cache"
 	"whoopit-core/internal/platform/config"
@@ -98,6 +99,7 @@ func main() {
 	custody.RegisterRoutes(router, tenantDB, moveSvc, valkeyClient)
 	warehouse.RegisterRoutes(router, tenantDB, moveSvc)
 	retail.RegisterRoutes(router, tenantDB, moveSvc)
+	superadmin.RegisterRoutes(router, tenantDB)
 
 	// Readiness probes for Kubernetes / Docker orchestrators
 	platformHttp.RegisterReadinessRoute(router, map[string]platformHttp.ReadinessCheckFunc{
