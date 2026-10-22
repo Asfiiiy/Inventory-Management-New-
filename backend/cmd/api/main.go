@@ -20,6 +20,7 @@ import (
 	"whoopit-core/internal/modules/retail"
 	"whoopit-core/internal/modules/warehouse"
 	"whoopit-core/internal/platform/cache"
+	"whoopit-core/internal/platform/config"
 	"whoopit-core/internal/platform/database"
 	platformHttp "whoopit-core/internal/platform/http"
 )
@@ -30,25 +31,31 @@ func main() {
 	}))
 	slog.SetDefault(logger)
 
-	port := os.Getenv("APP_PORT")
-	if port == "" {
-		port = "8080"
+	// 1. Load & validate environment configuration at startup
+	cfg, err := config.Load()
+	if err != nil {
+		logger.Error("configuration validation failed", slog.Any("error", err))
+		os.Exit(1)
 	}
-
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		dbURL = "postgres://whoopit_admin:whoopit_secure_pw_2026@localhost:5432/whoopit_inventory_v4?sslmode=disable"
-	}
+	logger.Info("configuration loaded successfully",
+		slog.String("env", cfg.AppEnv),
+		slog.String("port", cfg.AppPort),
+		slog.Int("db_max_conns", int(cfg.DBMaxConns)),
+	)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// 1. Initialize PostgreSQL connection pool
-	poolConfig, err := pgxpool.ParseConfig(dbURL)
+	// 2. Initialize PostgreSQL connection pool
+	poolConfig, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 	if err != nil {
 		logger.Error("failed to parse database configuration", slog.Any("error", err))
 		os.Exit(1)
 	}
+	poolConfig.MaxConns = cfg.DBMaxConns
+	poolConfig.MinConns = cfg.DBMinConns
+	poolConfig.MaxConnLifetime = cfg.DBMaxConnLifetime
+	poolConfig.MaxConnIdleTime = cfg.DBMaxConnIdleTime
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
@@ -67,16 +74,12 @@ func main() {
 	tenantDB := database.NewTenantDB(pool)
 	moveSvc := inventory.NewStockMovementService(tenantDB)
 
-	valkeyAddr := os.Getenv("VALKEY_ADDR")
-	if valkeyAddr == "" {
-		valkeyAddr = "localhost:6379"
-	}
-	valkeyClient, err := cache.NewValkeyClient(valkeyAddr)
+	valkeyClient, err := cache.NewValkeyClient(cfg.ValkeyAddr)
 	if err != nil {
 		logger.Warn("valkey cache connection unavailable, continuing without cache", slog.Any("error", err))
 	} else {
 		defer valkeyClient.Close()
-		logger.Info("connected to Valkey 9 cache", slog.String("addr", valkeyAddr))
+		logger.Info("connected to Valkey 9 cache", slog.String("addr", cfg.ValkeyAddr))
 	}
 
 	schemaValidator, err := profiles.NewSchemaValidator()
@@ -97,7 +100,7 @@ func main() {
 
 	// 4. Start HTTP Server with Graceful Shutdown
 	srv := &http.Server{
-		Addr:         ":" + port,
+		Addr:         ":" + cfg.AppPort,
 		Handler:      router,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 30 * time.Second,
@@ -106,7 +109,7 @@ func main() {
 
 	serverErrors := make(chan error, 1)
 	go func() {
-		logger.Info("starting Whoopit Core API server", slog.String("port", port))
+		logger.Info("starting Whoopit Core API server", slog.String("port", cfg.AppPort))
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			serverErrors <- err
 		}

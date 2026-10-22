@@ -29,3 +29,5 @@ sqlc-gen:
 
 test:
 	cd backend && go test -v ./...
+
+ci: test build-frontend

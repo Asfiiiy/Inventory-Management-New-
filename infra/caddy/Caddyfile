@@ -1,0 +1,38 @@
+# ====================================================================
+# Whoopit Production Ingress - Caddy Reverse Proxy & Automatic HTTPS
+# ====================================================================
+
+{
+    email admin@whoopit.io
+    admin off
+}
+
+:80 {
+    # API Backend Reverse Proxy
+    handle /api/* {
+        reverse_proxy api:8080
+    }
+
+    # Swagger / OpenAPI Docs
+    handle /swagger* {
+        reverse_proxy api:8080
+    }
+
+    # Health Check
+    handle /healthz {
+        reverse_proxy api:8080
+    }
+
+    # Frontend Next.js Web App
+    handle {
+        reverse_proxy web:3000
+    }
+
+    # Security Headers
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    }
+}
