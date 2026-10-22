@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(
-    async (email: string, password: string) => {
+    async (email: string, password: string, targetRedirect?: string) => {
       setIsLoading(true);
       try {
         const res = await apiClient.auth.login({ email, password });
@@ -105,7 +105,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setTenantId(receivedUser.org_id);
         }
 
-        router.push("/");
+        if (targetRedirect) {
+          router.push(targetRedirect);
+        } else if (receivedUser.role === "admin") {
+          router.push("/superadmin");
+        } else {
+          router.push("/");
+        }
       } finally {
         setIsLoading(false);
       }

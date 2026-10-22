@@ -27,6 +27,7 @@ import {
   AlertCircle,
   TrendingUp,
   FileSpreadsheet,
+  Crown,
 } from "lucide-react";
 import { useInventory } from "@/lib/inventory-store";
 import { useAuth } from "@/lib/auth-context";
@@ -151,6 +152,36 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-12">
+      {/* SuperAdmin HQ Switcher Banner (Visible to Admins) */}
+      {isAdmin && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/60 via-indigo-950/40 to-slate-900/60 border border-purple-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl backdrop-blur-md">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-300 shrink-0 shadow-xs">
+              <Crown className="w-6 h-6 text-amber-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-white">Platform Owner / SuperAdmin Mode</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                  HQ Available
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5">
+                You are currently viewing a <strong>Client Company's Store Workspace</strong>. To track which companies have been given the software, view subscription plans, or provision a new company:
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/superadmin"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 hover:shadow-purple-600/50 transition-all shrink-0 cursor-pointer"
+          >
+            <Crown className="w-4 h-4 text-amber-300" />
+            <span>Open SuperAdmin HQ</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
         <div>
