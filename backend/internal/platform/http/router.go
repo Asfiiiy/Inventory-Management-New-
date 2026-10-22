@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"time"
@@ -58,6 +59,8 @@ func SlogLoggerMiddleware(logger *slog.Logger) func(next http.Handler) http.Hand
 func NewRouter(logger *slog.Logger) *chi.Mux {
 	r := chi.NewRouter()
 
+	r.Use(SecurityHeadersMiddleware)
+	r.Use(MaxBodySizeMiddleware(10 << 20)) // 10MB payload limit to prevent DoS
 	r.Use(CorsMiddleware)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -66,6 +69,10 @@ func NewRouter(logger *slog.Logger) *chi.Mux {
 	}
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
+
+	// Global rate limiter: 600 req/minute per IP
+	defaultLimiter := NewIPRateLimiter(600, time.Minute)
+	r.Use(defaultLimiter.Middleware)
 
 	// Root liveness check
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -76,4 +83,29 @@ func NewRouter(logger *slog.Logger) *chi.Mux {
 	RegisterSwaggerRoutes(r)
 
 	return r
+}
+
+// ReadinessCheckFunc defines a component readiness probe callback.
+type ReadinessCheckFunc func(ctx context.Context) (status string, ok bool)
+
+// RegisterReadinessRoute wires the /readyz endpoint with registered health probes.
+func RegisterReadinessRoute(r *chi.Mux, probes map[string]ReadinessCheckFunc) {
+	r.Get("/readyz", func(w http.ResponseWriter, req *http.Request) {
+		allReady := true
+		results := make(map[string]string)
+		for name, probe := range probes {
+			status, ok := probe(req.Context())
+			results[name] = status
+			if !ok {
+				allReady = false
+			}
+		}
+
+		if !allReady {
+			RespondProblem(w, req, http.StatusServiceUnavailable, "System Not Ready", "One or more required subsystem probes failed", nil)
+			return
+		}
+
+		RespondJSON(w, http.StatusOK, results, nil)
+	})
 }

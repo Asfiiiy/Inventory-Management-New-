@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -97,6 +98,25 @@ func main() {
 	custody.RegisterRoutes(router, tenantDB, moveSvc, valkeyClient)
 	warehouse.RegisterRoutes(router, tenantDB, moveSvc)
 	retail.RegisterRoutes(router, tenantDB, moveSvc)
+
+	// Readiness probes for Kubernetes / Docker orchestrators
+	platformHttp.RegisterReadinessRoute(router, map[string]platformHttp.ReadinessCheckFunc{
+		"postgres": func(ctx context.Context) (string, bool) {
+			if err := pool.Ping(ctx); err != nil {
+				return fmt.Sprintf("db connection error: %v", err), false
+			}
+			return "connected", true
+		},
+		"valkey": func(ctx context.Context) (string, bool) {
+			if valkeyClient == nil {
+				return "unconfigured (fallback mode)", true
+			}
+			if err := valkeyClient.Client().Ping(ctx).Err(); err != nil {
+				return fmt.Sprintf("valkey ping error: %v", err), false
+			}
+			return "connected", true
+		},
+	})
 
 	// 4. Start HTTP Server with Graceful Shutdown
 	srv := &http.Server{
