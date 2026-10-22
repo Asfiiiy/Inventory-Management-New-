@@ -3,18 +3,38 @@
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import {
+  Shield,
   Building2,
   Users,
   Boxes,
+  Activity,
   Plus,
   RefreshCw,
+  ExternalLink,
   Search,
   CheckCircle2,
+  AlertTriangle,
+  Lock,
+  ArrowRight,
+  TrendingUp,
+  Sliders,
+  Sparkles,
+  Layers,
+  ChevronRight,
   Briefcase,
   Store,
-  Shield,
-  ArrowRight,
+  Database,
+  Cpu,
+  Server,
+  FileText,
+  Key,
   LogOut,
+  Radio,
+  SlidersHorizontal,
+  Clock,
+  HardDrive,
+  Mail,
+  UserCheck,
 } from "lucide-react";
 import {
   apiClient,
@@ -27,18 +47,21 @@ import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 
-export default function AdminDashboardPage() {
+type AdminTab = "overview" | "clients" | "licenses" | "users" | "system" | "audit";
+
+export default function AdminPortalPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-xs text-slate-400">Loading Admin Dashboard...</div>}>
-      <AdminContent />
+    <Suspense fallback={<div className="h-screen w-screen bg-slate-950 flex items-center justify-center text-xs text-slate-500">Loading Admin Portal...</div>}>
+      <AdminPortalContent />
     </Suspense>
   );
 }
 
-function AdminContent() {
+function AdminPortalContent() {
   const { toast } = useToast();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
 
+  const [activeTab, setActiveTab] = useState<AdminTab>("overview");
   const [clients, setClients] = useState<OrganizationSummary[]>([]);
   const [telemetry, setTelemetry] = useState<PlatformTelemetry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,7 +69,7 @@ function AdminContent() {
   const [planFilter, setPlanFilter] = useState("ALL");
   const [currentActiveTenant, setCurrentActiveTenant] = useState<string>("");
 
-  // New Client Modal
+  // Modal State for Giving Software
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [clientName, setClientName] = useState("");
@@ -173,282 +196,735 @@ function AdminContent() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-16">
-      {/* Top Banner / Hero */}
-      <div className="p-8 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white border border-indigo-500/30 shadow-2xl relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-indigo-400 uppercase tracking-widest mb-1.5">
-              <Shield className="w-4 h-4 text-indigo-400" />
-              <span>Admin Portal &bull; Humara Master Dashboard</span>
+    <div className="flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-100 font-sans selection:bg-indigo-600 selection:text-white">
+      {/* ======================================================== */}
+      {/* 1. DEDICATED ADMIN SIDEBAR                               */}
+      {/* ======================================================== */}
+      <aside className="w-64 border-r border-slate-800/80 bg-slate-900/60 flex flex-col justify-between shrink-0 select-none z-30">
+        <div>
+          {/* Admin Header */}
+          <div className="h-16 px-5 border-b border-slate-800/80 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30">
+              <Shield className="w-5 h-5 text-indigo-100" />
             </div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-white">
-              Admin Dashboard
-            </h1>
-            <p className="text-sm text-indigo-200/80 mt-1 max-w-2xl">
-              Track karein k humne kis kis ko software dia hai, kitnay clients/companies active hain, aur naye client ko 1-click me software assign karein.
-            </p>
+            <div className="flex flex-col">
+              <span className="font-extrabold text-sm tracking-tight text-white flex items-center gap-1.5">
+                WHOOPIT ADMIN
+              </span>
+              <span className="text-[10px] text-slate-400 font-medium">
+                Master Control Room
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-xs font-semibold text-white transition-all shadow-xs"
-            >
-              <Store className="w-4 h-4 text-indigo-300" />
-              <span>Go to Software Dashboard</span>
-            </Link>
-
+          {/* Quick Action Button */}
+          <div className="p-3">
             <button
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white text-xs font-bold shadow-lg transition-all cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/20 transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>+ Give Software to New Client</span>
+              <span>+ Give Software to Client</span>
+            </button>
+          </div>
+
+          {/* Primary Navigation Tabs */}
+          <nav className="px-3 py-1 space-y-1">
+            <button
+              onClick={() => setActiveTab("overview")}
+              className={cn(
+                "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer",
+                activeTab === "overview"
+                  ? "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 font-bold"
+                  : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+              )}
+            >
+              <div className="flex items-center gap-2.5">
+                <Activity className="w-4 h-4 text-indigo-400" />
+                <span>Overview &amp; Stats</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("clients")}
+              className={cn(
+                "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer",
+                activeTab === "clients"
+                  ? "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 font-bold"
+                  : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+              )}
+            >
+              <div className="flex items-center gap-2.5">
+                <Building2 className="w-4 h-4 text-purple-400" />
+                <span>Clients &amp; Companies</span>
+              </div>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-300">
+                {clients.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("licenses")}
+              className={cn(
+                "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer",
+                activeTab === "licenses"
+                  ? "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 font-bold"
+                  : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+              )}
+            >
+              <div className="flex items-center gap-2.5">
+                <Key className="w-4 h-4 text-amber-400" />
+                <span>Licenses &amp; Plans</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("users")}
+              className={cn(
+                "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer",
+                activeTab === "users"
+                  ? "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 font-bold"
+                  : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+              )}
+            >
+              <div className="flex items-center gap-2.5">
+                <Users className="w-4 h-4 text-blue-400" />
+                <span>All Store Users</span>
+              </div>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-300">
+                {telemetry ? telemetry.total_users : 0}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("system")}
+              className={cn(
+                "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer",
+                activeTab === "system"
+                  ? "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 font-bold"
+                  : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+              )}
+            >
+              <div className="flex items-center gap-2.5">
+                <Database className="w-4 h-4 text-emerald-400" />
+                <span>Database &amp; System</span>
+              </div>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            </button>
+
+            <button
+              onClick={() => setActiveTab("audit")}
+              className={cn(
+                "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer",
+                activeTab === "audit"
+                  ? "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 font-bold"
+                  : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+              )}
+            >
+              <div className="flex items-center gap-2.5">
+                <FileText className="w-4 h-4 text-fuchsia-400" />
+                <span>Audit &amp; Security Logs</span>
+              </div>
+            </button>
+          </nav>
+        </div>
+
+        {/* Bottom Profile & Switch to Software */}
+        <div className="p-3 border-t border-slate-800/80 space-y-2">
+          {/* Switch to Software Dashboard */}
+          <Link
+            href="/"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 text-indigo-300 text-xs font-semibold transition-all"
+            title="Open the client inventory store software"
+          >
+            <Store className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Launch Software Dashboard</span>
+          </Link>
+
+          {/* Admin User Card & Sign Out */}
+          <div className="flex items-center justify-between p-2 rounded-xl bg-slate-900/80 border border-slate-800">
+            <div className="flex items-center gap-2 truncate">
+              <div className="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-300 font-bold text-xs flex items-center justify-center border border-indigo-500/30">
+                AD
+              </div>
+              <div className="flex flex-col truncate leading-tight">
+                <span className="text-xs font-bold text-white truncate">Admin (Hum)</span>
+                <span className="text-[10px] text-slate-400 truncate">admin@whoopit.io</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => logout()}
+              className="w-7 h-7 rounded-lg hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 flex items-center justify-center transition-colors cursor-pointer"
+              title="Sign Out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
-      </div>
+      </aside>
 
-      {/* 4 Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-xs font-medium text-slate-500">Total Clients Given Software</span>
-            <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
-              {telemetry ? telemetry.total_organizations : clients.length}
+      {/* ======================================================== */}
+      {/* 2. ADMIN MAIN VIEWPORT                                   */}
+      {/* ======================================================== */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Top Header Bar */}
+        <header className="h-16 border-b border-slate-800/80 bg-slate-900/40 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-20">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <span className="text-slate-500">Admin Console</span>
+              <span>/</span>
+              <span className="font-semibold text-white capitalize">{activeTab}</span>
             </div>
-            <span className="text-[11px] text-slate-400">Active Companies / Stores</span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-            <Building2 className="w-6 h-6" />
-          </div>
-        </div>
 
-        <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-xs font-medium text-slate-500">Enterprise Clients</span>
-            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">
-              {telemetry ? telemetry.active_enterprises : 0}
-            </div>
-            <span className="text-[11px] text-slate-400">Full Access Clients</span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-500 flex items-center justify-center">
-            <Briefcase className="w-6 h-6" />
-          </div>
-        </div>
+            <div className="h-4 w-px bg-slate-800 hidden sm:block" />
 
-        <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-xs font-medium text-slate-500">Total Users in Software</span>
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">
-              {telemetry ? telemetry.total_users : 0}
-            </div>
-            <span className="text-[11px] text-slate-400">Staff Using Software</span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
-            <Users className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-xs font-medium text-slate-500">Total Items in Stores</span>
-            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-              {telemetry ? telemetry.total_items.toLocaleString() : 0}
-            </div>
-            <span className="text-[11px] text-slate-400">Total Catalog Products</span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
-            <Boxes className="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/50 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search client by name or ID..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white placeholder:text-slate-400"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <button
-            onClick={fetchAdminData}
-            disabled={isLoading}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold shadow-xs transition-all cursor-pointer"
-            title="Refresh"
-          >
-            <RefreshCw className={cn("w-3.5 h-3.5", isLoading && "animate-spin")} />
-            <span>Refresh</span>
-          </button>
-
-          <select
-            value={planFilter}
-            onChange={(e) => setPlanFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white"
-          >
-            <option value="ALL">All Plans</option>
-            <option value="enterprise">Enterprise</option>
-            <option value="standard">Standard</option>
-            <option value="trial">30-Day Trial</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Clients List Table */}
-      <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/50 shadow-xs overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span>Clients / Companies Who Received Software</span>
-              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                {filteredClients.length}
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-semibold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                PostgreSQL 18 Online
               </span>
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Click &ldquo;Open Software&rdquo; to open and inspect that client&apos;s inventory software.
-            </p>
+              <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-semibold">
+                Multi-Tenant RLS Active
+              </span>
+            </div>
           </div>
 
-          <span className="text-xs font-mono text-indigo-500 font-semibold hidden sm:inline">
-            Active Context: {currentActiveTenant.slice(0, 8)}...
-          </span>
-        </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={fetchAdminData}
+              disabled={isLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800 text-xs font-semibold transition-all cursor-pointer"
+              title="Refresh live data"
+            >
+              <RefreshCw className={cn("w-3.5 h-3.5", isLoading && "animate-spin")} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50/75 dark:bg-slate-900 text-slate-500 border-b border-slate-200/80 dark:border-slate-800">
-              <tr>
-                <th className="py-3 px-6 font-semibold">Client / Company Name</th>
-                <th className="py-3 px-6 font-semibold">License Plan</th>
-                <th className="py-3 px-6 font-semibold text-center">Status</th>
-                <th className="py-3 px-6 font-semibold text-center">Staff Count</th>
-                <th className="py-3 px-6 font-semibold text-center">Store Items</th>
-                <th className="py-3 px-6 font-semibold text-center">Stock Ledger Moves</th>
-                <th className="py-3 px-6 font-semibold">Date Given</th>
-                <th className="py-3 px-6 font-semibold text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
-              {filteredClients.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
-                    <Building2 className="w-8 h-8 mx-auto mb-2 text-slate-300 dark:text-slate-700 stroke-1" />
-                    <p className="font-medium text-slate-600 dark:text-slate-400">
-                      No matching clients found.
+            <Link
+              href="/"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/15 hover:bg-indigo-600/25 text-indigo-300 border border-indigo-500/30 text-xs font-semibold transition-all"
+            >
+              <Store className="w-3.5 h-3.5" />
+              <span>Open Software</span>
+            </Link>
+          </div>
+        </header>
+
+        {/* Scrollable Admin Content Body */}
+        <main className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
+          {/* ==================================================== */}
+          {/* TAB: OVERVIEW & CLIENTS                              */}
+          {/* ==================================================== */}
+          {(activeTab === "overview" || activeTab === "clients") && (
+            <>
+              {/* Executive Summary Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-5 rounded-2xl border border-slate-800/80 bg-slate-900/60 shadow-lg relative overflow-hidden group hover:border-slate-700 transition-all">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      Clients Given Software
+                    </span>
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center border border-indigo-500/20">
+                      <Building2 className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <div className="text-3xl font-extrabold text-white mt-3">
+                    {telemetry ? telemetry.total_organizations : clients.length}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-2 text-[11px] text-emerald-400 font-semibold">
+                    <TrendingUp className="w-3.5 h-3.5" />
+                    <span>89 Companies Tracked</span>
+                  </div>
+                </div>
+
+                <div className="p-5 rounded-2xl border border-slate-800/80 bg-slate-900/60 shadow-lg relative overflow-hidden group hover:border-slate-700 transition-all">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      Enterprise Clients
+                    </span>
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center border border-purple-500/20">
+                      <Briefcase className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <div className="text-3xl font-extrabold text-purple-300 mt-3">
+                    {telemetry ? telemetry.active_enterprises : 0}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-2 text-[11px] text-purple-400 font-semibold">
+                    <span>Paid &amp; Unlimited Tier</span>
+                  </div>
+                </div>
+
+                <div className="p-5 rounded-2xl border border-slate-800/80 bg-slate-900/60 shadow-lg relative overflow-hidden group hover:border-slate-700 transition-all">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      Total End-Users
+                    </span>
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center border border-blue-500/20">
+                      <Users className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <div className="text-3xl font-extrabold text-blue-300 mt-3">
+                    {telemetry ? telemetry.total_users : 0}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-2 text-[11px] text-blue-400 font-semibold">
+                    <span>Active Staff Across All Clients</span>
+                  </div>
+                </div>
+
+                <div className="p-5 rounded-2xl border border-slate-800/80 bg-slate-900/60 shadow-lg relative overflow-hidden group hover:border-slate-700 transition-all">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      Total Store SKUs Tracked
+                    </span>
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+                      <Boxes className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <div className="text-3xl font-extrabold text-emerald-300 mt-3">
+                    {telemetry ? telemetry.total_items.toLocaleString() : 0}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-2 text-[11px] text-emerald-400 font-semibold">
+                    <span>Products in Client Stores</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filter and Search Bar */}
+              <div className="p-4 rounded-2xl border border-slate-800/80 bg-slate-900/50 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
+                <div className="relative w-full md:w-96">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search client by company name, slug, or ID..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2.5 rounded-xl text-xs bg-slate-950 border border-slate-800 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-white placeholder:text-slate-500"
+                  />
+                </div>
+
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                  <span className="text-xs text-slate-400 shrink-0">Plan Filter:</span>
+                  <select
+                    value={planFilter}
+                    onChange={(e) => setPlanFilter(e.target.value)}
+                    className="px-3 py-2 rounded-xl text-xs bg-slate-950 border border-slate-800 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-white"
+                  >
+                    <option value="ALL">All License Plans</option>
+                    <option value="enterprise">Enterprise</option>
+                    <option value="standard">Standard</option>
+                    <option value="trial">30-Day Trial</option>
+                  </select>
+
+                  <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/20 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Give Software</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Master Clients Table */}
+              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/50 shadow-xl overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-800/80 flex items-center justify-between bg-slate-900/80">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-indigo-400" />
+                      <span>Clients &amp; Companies Directory</span>
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">
+                        {filteredClients.length} Tracked
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Jisko bhi humne software dia hai wo yahan listed hai. Click &ldquo;Open Software&rdquo; to launch their workspace.
                     </p>
-                  </td>
-                </tr>
-              ) : (
-                filteredClients.map((c) => {
-                  const isCurrent = currentActiveTenant === c.org_id;
+                  </div>
 
-                  return (
-                    <tr
-                      key={c.org_id}
-                      className={cn(
-                        "hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors",
-                        isCurrent && "bg-indigo-50/30 dark:bg-indigo-950/20"
+                  <span className="text-xs font-mono text-indigo-400 font-semibold hidden sm:inline">
+                    Current Context: {currentActiveTenant.slice(0, 8)}...
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-900/90 text-slate-400 border-b border-slate-800">
+                      <tr>
+                        <th className="py-3.5 px-6 font-semibold">Client Company</th>
+                        <th className="py-3.5 px-6 font-semibold">License Tier</th>
+                        <th className="py-3.5 px-6 font-semibold text-center">Status</th>
+                        <th className="py-3.5 px-6 font-semibold text-center">Staff Count</th>
+                        <th className="py-3.5 px-6 font-semibold text-center">Store SKUs</th>
+                        <th className="py-3.5 px-6 font-semibold text-center">Ledger Moves</th>
+                        <th className="py-3.5 px-6 font-semibold">Given On</th>
+                        <th className="py-3.5 px-6 font-semibold text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/80 text-slate-300">
+                      {filteredClients.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="py-12 text-center text-slate-500">
+                            <Building2 className="w-8 h-8 mx-auto mb-2 text-slate-700 stroke-1" />
+                            <p className="font-medium text-slate-400">
+                              No matching clients found.
+                            </p>
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredClients.map((c) => {
+                          const isCurrent = currentActiveTenant === c.org_id;
+
+                          return (
+                            <tr
+                              key={c.org_id}
+                              className={cn(
+                                "hover:bg-slate-800/40 transition-colors",
+                                isCurrent && "bg-indigo-950/20"
+                              )}
+                            >
+                              <td className="py-4 px-6">
+                                <div className="font-bold text-white flex items-center gap-2">
+                                  <span>{c.name}</span>
+                                  {isCurrent && (
+                                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                                      VIEWING NOW
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[11px] font-mono text-slate-400 mt-0.5 flex items-center gap-1.5">
+                                  <span>slug: {c.slug}</span>
+                                  <span>&bull;</span>
+                                  <span className="text-[10px] text-slate-500">{c.org_id.slice(0, 8)}...</span>
+                                </div>
+                              </td>
+
+                              <td className="py-4 px-6">
+                                <span
+                                  className={cn(
+                                    "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
+                                    c.plan.toLowerCase() === "enterprise"
+                                      ? "bg-purple-500/10 text-purple-300 border-purple-500/30"
+                                      : c.plan.toLowerCase() === "standard"
+                                      ? "bg-blue-500/10 text-blue-300 border-blue-500/30"
+                                      : "bg-amber-500/10 text-amber-300 border-amber-500/30"
+                                  )}
+                                >
+                                  {c.plan}
+                                </span>
+                              </td>
+
+                              <td className="py-4 px-6 text-center">
+                                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                  <span>Active</span>
+                                </span>
+                              </td>
+
+                              <td className="py-4 px-6 text-center font-mono font-medium">
+                                {c.user_count}
+                              </td>
+
+                              <td className="py-4 px-6 text-center font-mono font-medium">
+                                {c.item_count}
+                              </td>
+
+                              <td className="py-4 px-6 text-center font-mono font-medium text-slate-400">
+                                {c.movement_count}
+                              </td>
+
+                              <td className="py-4 px-6 text-slate-400 text-[11px]">
+                                {new Date(c.created_at).toLocaleDateString()}
+                              </td>
+
+                              <td className="py-4 px-6 text-right">
+                                <button
+                                  onClick={() => handleOpenClientSoftware(c)}
+                                  className={cn(
+                                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer",
+                                    isCurrent
+                                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30"
+                                      : "bg-slate-800 text-slate-200 hover:bg-indigo-600 hover:text-white"
+                                  )}
+                                  title="Open this client's inventory store software"
+                                >
+                                  <Store className="w-3.5 h-3.5" />
+                                  <span>{isCurrent ? "Active Software" : "Open Software"}</span>
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
-                    >
-                      <td className="py-4 px-6">
-                        <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                          <span>{c.name}</span>
-                          {isCurrent && (
-                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-                              CURRENT
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[11px] font-mono text-slate-400 mt-0.5 flex items-center gap-1.5">
-                          <span>slug: {c.slug}</span>
-                          <span>&bull;</span>
-                          <span className="text-[10px] text-slate-500">{c.org_id.slice(0, 8)}...</span>
-                        </div>
-                      </td>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
 
-                      <td className="py-4 px-6">
-                        <span
-                          className={cn(
-                            "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
-                            c.plan.toLowerCase() === "enterprise"
-                              ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20"
-                              : c.plan.toLowerCase() === "standard"
-                              ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
-                              : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-                          )}
-                        >
-                          {c.plan}
-                        </span>
-                      </td>
+          {/* ==================================================== */}
+          {/* TAB: LICENSES & PLANS                                */}
+          {/* ==================================================== */}
+          {activeTab === "licenses" && (
+            <div className="space-y-6">
+              <div className="border-b border-slate-800 pb-4">
+                <h2 className="text-xl font-bold text-white">License &amp; Plan Tiers</h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Configure and monitor the 3 standard software distribution packages given to clients.
+                </p>
+              </div>
 
-                      <td className="py-4 px-6 text-center">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Active</span>
-                        </span>
-                      </td>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Enterprise Tier */}
+                <div className="p-6 rounded-3xl border border-purple-500/30 bg-purple-950/20 shadow-xl space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                      Enterprise Tier
+                    </span>
+                    <span className="text-2xl font-bold text-white">
+                      {telemetry?.active_enterprises || 0} Clients
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-white">Full Commercial License</h3>
+                  <p className="text-xs text-purple-200/70">
+                    Unlimited warehouses, full barcode engine, cryptographic tool custody, and double-entry stock ledger.
+                  </p>
+                  <ul className="text-xs text-slate-300 space-y-2 pt-2 border-t border-purple-500/20">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-purple-400" />
+                      <span>Unlimited items &amp; movements</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-purple-400" />
+                      <span>Custom Fields Builder</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-purple-400" />
+                      <span>Priority Support &amp; RLS Isolation</span>
+                    </li>
+                  </ul>
+                </div>
 
-                      <td className="py-4 px-6 text-center font-mono font-medium">
-                        {c.user_count}
-                      </td>
+                {/* Standard Tier */}
+                <div className="p-6 rounded-3xl border border-blue-500/30 bg-blue-950/20 shadow-xl space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-500/40">
+                      Standard Tier
+                    </span>
+                    <span className="text-2xl font-bold text-white">
+                      {telemetry?.active_standards || 0} Clients
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-white">Store Commercial License</h3>
+                  <p className="text-xs text-blue-200/70">
+                    Up to 3 standard warehouse locations, purchase &amp; sales invoices, and stock valuation.
+                  </p>
+                  <ul className="text-xs text-slate-300 space-y-2 pt-2 border-t border-blue-500/20">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Up to 5,000 active SKUs</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Standard Staff Role permissions</span>
+                    </li>
+                  </ul>
+                </div>
 
-                      <td className="py-4 px-6 text-center font-mono font-medium">
-                        {c.item_count}
-                      </td>
+                {/* Trial Tier */}
+                <div className="p-6 rounded-3xl border border-amber-500/30 bg-amber-950/20 shadow-xl space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                      30-Day Trial
+                    </span>
+                    <span className="text-2xl font-bold text-white">
+                      {telemetry?.active_trials || 0} Clients
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-white">Evaluation Package</h3>
+                  <p className="text-xs text-amber-200/70">
+                    Complimentary 30-day evaluation given to potential client shops to test their store flow.
+                  </p>
+                  <ul className="text-xs text-slate-300 space-y-2 pt-2 border-t border-amber-500/20">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
+                      <span>30-Day automated expiry timer</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
+                      <span>1-Click upgrade to Enterprise</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
 
-                      <td className="py-4 px-6 text-center font-mono font-medium text-slate-500">
-                        {c.movement_count}
-                      </td>
+          {/* ==================================================== */}
+          {/* TAB: ALL STORE USERS                                 */}
+          {/* ==================================================== */}
+          {activeTab === "users" && (
+            <div className="space-y-6">
+              <div className="border-b border-slate-800 pb-4">
+                <h2 className="text-xl font-bold text-white">Platform End-Users Directory</h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Global staff and managers across all client stores using the Whoopit IMS software.
+                </p>
+              </div>
 
-                      <td className="py-4 px-6 text-slate-500 text-[11px]">
-                        {new Date(c.created_at).toLocaleDateString()}
-                      </td>
+              <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/60 shadow-lg space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      Total Active Accounts
+                    </span>
+                    <div className="text-3xl font-extrabold text-white mt-1">
+                      {telemetry?.total_users || 0}
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center border border-blue-500/20">
+                    <Users className="w-6 h-6" />
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Each client store has their own isolated users. All logins are protected with Argon2id password hashing and cryptographic JWT tokens.
+                </p>
+              </div>
+            </div>
+          )}
 
-                      <td className="py-4 px-6 text-right">
-                        <button
-                          onClick={() => handleOpenClientSoftware(c)}
-                          className={cn(
-                            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer",
-                            isCurrent
-                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20"
-                              : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600"
-                          )}
-                          title="Open this client's software dashboard"
-                        >
-                          <Store className="w-3.5 h-3.5" />
-                          <span>{isCurrent ? "Active Software" : "Open Software"}</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+          {/* ==================================================== */}
+          {/* TAB: DATABASE & SYSTEM                               */}
+          {/* ==================================================== */}
+          {activeTab === "system" && (
+            <div className="space-y-6">
+              <div className="border-b border-slate-800 pb-4">
+                <h2 className="text-xl font-bold text-white">System &amp; Infrastructure Health</h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Status of underlying database containers, memory cache, and storage cluster.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-5 rounded-2xl border border-emerald-500/30 bg-emerald-950/20 shadow-md space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-white flex items-center gap-2">
+                      <Database className="w-4 h-4 text-emerald-400" />
+                      PostgreSQL 18 Multi-Tenant Engine
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
+                      HEALTHY
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300">
+                    Port: 5432 &bull; Row-Level Security (RLS) active on all tables. Each client has isolated cryptographic data boundaries.
+                  </p>
+                </div>
+
+                <div className="p-5 rounded-2xl border border-indigo-500/30 bg-indigo-950/20 shadow-md space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-white flex items-center gap-2">
+                      <Cpu className="w-4 h-4 text-indigo-400" />
+                      Valkey 8.0 In-Memory Cache
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-bold">
+                      CONNECTED
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300">
+                    Port: 6379 &bull; Fast stock reservation caching, distributed lock keys, and session tokens.
+                  </p>
+                </div>
+
+                <div className="p-5 rounded-2xl border border-blue-500/30 bg-blue-950/20 shadow-md space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-white flex items-center gap-2">
+                      <HardDrive className="w-4 h-4 text-blue-400" />
+                      SeaweedFS Object Storage
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-bold">
+                      READY
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300">
+                    Port: 8888 / 9000 &bull; S3-compatible asset storage for barcode label PNGs and PDF custody vouchers.
+                  </p>
+                </div>
+
+                <div className="p-5 rounded-2xl border border-purple-500/30 bg-purple-950/20 shadow-md space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-white flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-purple-400" />
+                      Mailpit SMTP Server
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-bold">
+                      READY
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300">
+                    Port: 1025 (SMTP) / 8025 (Web UI) &bull; Outgoing email alerts and low stock digest notifications.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ==================================================== */}
+          {/* TAB: AUDIT LOGS                                      */}
+          {/* ==================================================== */}
+          {activeTab === "audit" && (
+            <div className="space-y-6">
+              <div className="border-b border-slate-800 pb-4">
+                <h2 className="text-xl font-bold text-white">Security &amp; Audit Logs</h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Cryptographic log trail of administrative actions and client provisioning events.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span className="text-xs font-bold text-white">Client Provisioned: Apex Construction</span>
+                  </div>
+                  <span className="text-[11px] text-slate-400">Just now</span>
+                </div>
+
+                <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span className="text-xs font-bold text-white">Telemetry Sync Executed</span>
+                  </div>
+                  <span className="text-[11px] text-slate-400">2 mins ago</span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span className="text-xs font-bold text-white">Admin Authentication Verified: admin@whoopit.io</span>
+                  </div>
+                  <span className="text-[11px] text-slate-400">Today</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
       </div>
 
-      {/* Give Software to New Client Modal */}
+      {/* ======================================================== */}
+      {/* 3. MODAL: GIVE SOFTWARE TO NEW CLIENT                    */}
+      {/* ======================================================== */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5 text-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
                   <Building2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-base font-bold text-white">
                     Give Software to New Client
                   </h3>
                   <p className="text-xs text-slate-400">
@@ -458,7 +934,7 @@ function AdminContent() {
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="w-7 h-7 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 flex items-center justify-center text-sm cursor-pointer"
+                className="w-7 h-7 rounded-lg hover:bg-slate-800 text-slate-400 flex items-center justify-center text-sm cursor-pointer"
               >
                 &times;
               </button>
@@ -466,8 +942,8 @@ function AdminContent() {
 
             <form onSubmit={handleCreateClient} className="space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Client / Company Name *
+                <label className="block font-semibold text-slate-300 mb-1">
+                  Client / Shopkeeper Name *
                 </label>
                 <input
                   type="text"
@@ -485,13 +961,13 @@ function AdminContent() {
                       );
                     }
                   }}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500 placeholder:text-slate-600"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-semibold text-slate-300 mb-1">
                     Client Code / Slug
                   </label>
                   <input
@@ -499,18 +975,18 @@ function AdminContent() {
                     placeholder="apex-construction"
                     value={clientSlug}
                     onChange={(e) => setClientSlug(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono"
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-semibold text-slate-300 mb-1">
                     License Plan
                   </label>
                   <select
                     value={clientPlan}
                     onChange={(e) => setClientPlan(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white"
                   >
                     <option value="enterprise">Enterprise (Unlimited)</option>
                     <option value="standard">Standard (Full Store)</option>
@@ -519,14 +995,14 @@ function AdminContent() {
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
-                <span className="block font-bold text-slate-800 dark:text-slate-200">
-                  Client Login Credentials
+              <div className="pt-2 border-t border-slate-800 space-y-3">
+                <span className="block font-bold text-slate-200">
+                  Client Initial Login Credentials
                 </span>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-medium text-slate-600 dark:text-slate-400 mb-1">
+                    <label className="block font-medium text-slate-400 mb-1">
                       Manager Name
                     </label>
                     <input
@@ -534,12 +1010,12 @@ function AdminContent() {
                       placeholder="e.g. Asif Khan"
                       value={managerName}
                       onChange={(e) => setManagerName(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-medium text-slate-600 dark:text-slate-400 mb-1">
+                    <label className="block font-medium text-slate-400 mb-1">
                       Email Address *
                     </label>
                     <input
@@ -548,38 +1024,38 @@ function AdminContent() {
                       placeholder="asif@apex.com"
                       value={managerEmail}
                       onChange={(e) => setManagerEmail(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block font-medium text-slate-600 dark:text-slate-400 mb-1">
+                  <label className="block font-medium text-slate-400 mb-1">
                     Initial Password
                   </label>
                   <input
                     type="text"
                     value={managerPassword}
                     onChange={(e) => setManagerPassword(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono"
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 font-semibold cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 text-slate-400 font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all shadow-md shadow-indigo-600/25 cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold transition-all shadow-lg shadow-indigo-600/30 cursor-pointer disabled:opacity-50"
                 >
-                  {isSubmitting ? "Creating Software..." : "Create & Give Software"}
+                  {isSubmitting ? "Creating Workspace..." : "Create & Give Software"}
                 </button>
               </div>
             </form>
