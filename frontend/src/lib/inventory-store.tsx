@@ -83,6 +83,7 @@ interface InventoryContextType {
   stockOut: (data: {
     productId: string;
     quantity: number;
+    unit?: string;
     customerName: string;
     reference: string;
     unitPrice?: number;
@@ -397,20 +398,23 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const stockOut = async (data: {
     productId: string;
     quantity: number;
+    unit?: string;
     customerName: string;
     reference: string;
     unitPrice?: number;
   }): Promise<{ success: boolean; error?: string }> => {
     try {
-      const qty = Math.max(1, Number(data.quantity) || 1);
+      const qty = Math.max(0.01, Number(data.quantity) || 1);
 
       await apiClient.stock.createMove({
         item_id: data.productId,
         from_location_id: locations.warehouseId,
         to_location_id: locations.customerId,
         quantity: qty,
+        unit: data.unit || undefined,
         move_type: "RETAIL_SALE",
         reference_code: data.reference,
+        idempotency_key: `OUT-${data.reference}-${Date.now()}`,
       });
 
       await fetchBackendData();
