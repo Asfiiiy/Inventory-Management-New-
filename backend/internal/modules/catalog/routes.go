@@ -25,6 +25,26 @@ func RegisterRoutes(r chi.Router, tdb *database.TenantDB, validator *profiles.Sc
 		api.Get("/items", h.ListItems)
 		api.Get("/items/{id}", h.GetItemByID)
 		api.Delete("/items/{id}", h.DeleteItem)
+		api.Patch("/items/{id}/archive", h.ArchiveItem)
 		api.Post("/items/search", h.SearchItems)
+		api.Post("/items/import-csv", h.ImportProductsCSV)
+
+		// Custom Fields
+		api.Post("/custom-fields", h.CreateCustomField)
+		api.Get("/custom-fields", h.ListCustomFields)
+		api.Delete("/custom-fields/{id}", h.DeleteCustomField)
+
+		// Suppliers
+		api.Post("/suppliers", h.CreateSupplier)
+		api.Get("/suppliers", h.ListSuppliers)
+
+		// Categories
+		api.Post("/categories", h.CreateCategory)
+		api.Get("/categories", h.ListCategories)
+
+		// Units of Measure & Conversions
+		api.Post("/units", h.CreateUOM)
+		api.Get("/units", h.ListUOMs)
+		api.Post("/units/conversions", h.CreateUOMConversion)
 	})
 }

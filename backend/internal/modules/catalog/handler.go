@@ -3,7 +3,9 @@ package catalog
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -152,10 +154,17 @@ type CreateItemRequest struct {
 	TrackingMode    string          `json:"tracking_mode"`
 	BaseUom         string          `json:"base_uom"`
 	ValuationMethod string          `json:"valuation_method,omitempty"`
+	Barcode         string          `json:"barcode,omitempty"`
+	CostPrice       float64         `json:"cost_price,omitempty"`
+	SellingPrice    float64         `json:"selling_price,omitempty"`
+	ReorderLevel    float64         `json:"reorder_level,omitempty"`
+	BufferStock     float64         `json:"buffer_stock,omitempty"`
+	CategoryID      *string         `json:"category_id,omitempty"`
+	SupplierID      *string         `json:"supplier_id,omitempty"`
 	Attributes      json.RawMessage `json:"attributes"`
 }
 
-// CreateItem validates relational invariants and dynamic JSON schema before writing to DB.
+// CreateItem validates relational invariants, dynamic custom fields, and schema before writing to DB.
 func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
 	orgID, ok := middleware.GetTenantID(r.Context())
 	if !ok {
@@ -189,14 +198,20 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
 		req.TrackingMode = "none"
 	}
 	if req.BaseUom == "" {
-		req.BaseUom = "unit"
+		req.BaseUom = "pcs"
 	}
 	if req.ValuationMethod == "" {
-		req.ValuationMethod = "fifo"
+		req.ValuationMethod = "wac"
 	}
 
-	// 2. Dynamic JSON Schema Validation against requested Industry Profile
-	if h.validator != nil {
+	// 2. Validate against dynamic custom field definitions (Phase B3)
+	dynErrors, err := ValidateDynamicCustomFields(r.Context(), h.db, orgID, req.Attributes)
+	if err == nil && len(dynErrors) > 0 {
+		validationErrors = append(validationErrors, dynErrors...)
+	}
+
+	// 3. Dynamic JSON Schema Validation against requested Industry Profile (legacy backward compatibility)
+	if h.validator != nil && profile != "" {
 		attrErrors, err := h.validator.ValidateAttributes(profile, req.Attributes)
 		if err != nil {
 			platformHttp.RespondProblem(w, r, http.StatusBadRequest, "Invalid Profile", err.Error(), nil)
@@ -218,9 +233,23 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Execute Transaction
+	var catUUID, supUUID *uuid.UUID
+	if req.CategoryID != nil && *req.CategoryID != "" {
+		id, err := uuid.Parse(*req.CategoryID)
+		if err == nil {
+			catUUID = &id
+		}
+	}
+	if req.SupplierID != nil && *req.SupplierID != "" {
+		id, err := uuid.Parse(*req.SupplierID)
+		if err == nil {
+			supUUID = &id
+		}
+	}
+
+	// 4. Execute Transaction
 	var createdItem db.Item
-	err := h.db.WithTenantTx(r.Context(), orgID, func(q *db.Queries) error {
+	err = h.db.WithTenantTx(r.Context(), orgID, func(q *db.Queries) error {
 		attrs := req.Attributes
 		if len(attrs) == 0 {
 			attrs = json.RawMessage("{}")
@@ -238,7 +267,34 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return err
 		}
-		createdItem = item
+
+		// Update B3 extended fields
+		pool := h.db.Pool()
+		var updatedItem db.Item
+		err = pool.QueryRow(r.Context(), `
+			UPDATE items
+			SET barcode = COALESCE(NULLIF($3, ''), barcode),
+			    cost_price = $4,
+			    selling_price = $5,
+			    reorder_level = $6,
+			    buffer_stock = $7,
+			    category_id = $8,
+			    supplier_id = $9
+			WHERE item_id = $1 AND org_id = $2
+			RETURNING *
+		`, item.ItemID, orgID, req.Barcode, req.CostPrice, req.SellingPrice, req.ReorderLevel, req.BufferStock, catUUID, supUUID).Scan(
+			&updatedItem.ItemID, &updatedItem.OrgID, &updatedItem.Sku, &updatedItem.Name,
+			&updatedItem.TrackingMode, &updatedItem.BaseUom, &updatedItem.ValuationMethod,
+			&updatedItem.Attributes, &updatedItem.IsActive, &updatedItem.CreatedAt, &updatedItem.UpdatedAt,
+			&updatedItem.ReorderLevel, &updatedItem.BufferStock, &updatedItem.CostPrice,
+			&updatedItem.SellingPrice, &updatedItem.CategoryID, &updatedItem.SupplierID,
+			&updatedItem.Barcode, &updatedItem.ImageUrl,
+		)
+		if err != nil {
+			createdItem = item
+			return nil
+		}
+		createdItem = updatedItem
 		return nil
 	})
 
@@ -250,7 +306,7 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
 	platformHttp.RespondJSON(w, http.StatusCreated, createdItem, nil)
 }
 
-// ListItems retrieves all catalog items for the tenant.
+// ListItems retrieves catalog items for the tenant with search and category filtering.
 func (h *Handler) ListItems(w http.ResponseWriter, r *http.Request) {
 	orgID, ok := middleware.GetTenantID(r.Context())
 	if !ok {
@@ -258,22 +314,56 @@ func (h *Handler) ListItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var items []db.Item
-	err := h.db.WithTenantTx(r.Context(), orgID, func(q *db.Queries) error {
-		res, err := q.SearchItemsByAttribute(r.Context(), db.SearchItemsByAttributeParams{
-			OrgID:      orgID,
-			Attributes: []byte("{}"),
-		})
-		if err != nil {
-			return err
-		}
-		items = res
-		return nil
-	})
+	search := strings.TrimSpace(r.URL.Query().Get("search"))
+	categoryID := strings.TrimSpace(r.URL.Query().Get("category_id"))
 
+	query := `
+		SELECT * FROM items
+		WHERE org_id = $1 AND is_active = true
+	`
+	args := []any{orgID}
+	argIdx := 2
+
+	if categoryID != "" {
+		if cUUID, err := uuid.Parse(categoryID); err == nil {
+			query += fmt.Sprintf(" AND category_id = $%d", argIdx)
+			args = append(args, cUUID)
+			argIdx++
+		}
+	}
+
+	if search != "" {
+		searchPattern := "%" + search + "%"
+		query += fmt.Sprintf(" AND (sku ILIKE $%d OR name ILIKE $%d OR barcode ILIKE $%d)", argIdx, argIdx, argIdx)
+		args = append(args, searchPattern)
+		argIdx++
+	}
+
+	query += " ORDER BY name ASC"
+
+	pool := h.db.Pool()
+	rows, err := pool.Query(r.Context(), query, args...)
 	if err != nil {
 		platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "Internal Server Error", err.Error(), nil)
 		return
+	}
+	defer rows.Close()
+
+	var items []db.Item
+	for rows.Next() {
+		var it db.Item
+		err := rows.Scan(
+			&it.ItemID, &it.OrgID, &it.Sku, &it.Name, &it.TrackingMode,
+			&it.BaseUom, &it.ValuationMethod, &it.Attributes, &it.IsActive,
+			&it.CreatedAt, &it.UpdatedAt, &it.ReorderLevel, &it.BufferStock,
+			&it.CostPrice, &it.SellingPrice, &it.CategoryID, &it.SupplierID,
+			&it.Barcode, &it.ImageUrl,
+		)
+		if err != nil {
+			platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "Scan Error", err.Error(), nil)
+			return
+		}
+		items = append(items, it)
 	}
 
 	platformHttp.RespondJSON(w, http.StatusOK, items, map[string]interface{}{"count": len(items)})
