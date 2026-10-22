@@ -61,7 +61,7 @@ export default function DashboardPage() {
     resetToDefaults,
   } = useInventory();
   const { toast } = useToast();
-  const { isAdmin, isStaff } = useAuth();
+  const { isAdmin, isSuperAdmin, isStaff } = useAuth();
 
   const [isSeeding, setIsSeeding] = useState(false);
   const [backendAlerts, setBackendAlerts] = useState<StockAlert[]>([]);
@@ -152,8 +152,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-12">
-      {/* SuperAdmin HQ Switcher Banner (Visible to Admins) */}
-      {isAdmin && (
+      {/* SuperAdmin HQ Switcher Banner (Visible only to Whoopit Platform Owner) */}
+      {isSuperAdmin && (
         <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/60 via-indigo-950/40 to-slate-900/60 border border-purple-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl backdrop-blur-md">
           <div className="flex items-center gap-3.5">
             <div className="w-11 h-11 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-300 shrink-0 shadow-xs">

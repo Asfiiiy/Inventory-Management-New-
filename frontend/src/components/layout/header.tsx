@@ -27,7 +27,7 @@ export function Header() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const { products, lowStockItems, resetToDefaults } = useInventory();
-  const { user, logout, isAdmin, isStaff } = useAuth();
+  const { user, logout, isAdmin, isSuperAdmin, isStaff } = useAuth();
   const { toast } = useToast();
   const [searchVal, setSearchVal] = useState("");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -97,7 +97,7 @@ export function Header() {
 
       {/* Right Controls: Quick Actions, Low Stock Bell, Theme, User */}
       <div className="flex items-center gap-2.5">
-        {isAdmin && (
+        {isSuperAdmin && (
           <Link
             href="/superadmin"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20 text-xs font-bold transition-all shadow-xs"

@@ -17,6 +17,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   isStaff: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (payload: { email: string; password: string; name?: string; org_name?: string }) => Promise<void>;
@@ -29,6 +30,7 @@ const defaultAuthContext: AuthContextType = {
   isLoading: true,
   isAuthenticated: false,
   isAdmin: false,
+  isSuperAdmin: false,
   isStaff: false,
   login: async () => {},
   register: async () => {},
@@ -150,7 +152,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push("/login");
   }, [router]);
 
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
+  const isSuperAdmin = user?.email === "admin@whoopit.io" || user?.role === "superadmin";
   const isStaff = user?.role === "staff";
   const isAuthenticated = !!token && !!user;
 
@@ -162,6 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         isAuthenticated,
         isAdmin,
+        isSuperAdmin,
         isStaff,
         login,
         register,
