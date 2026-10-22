@@ -10,7 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"golang.org/x/crypto/bcrypt"
 
 	"whoopit-core/internal/platform/database"
 )
@@ -68,8 +67,8 @@ func (s *Service) Register(ctx context.Context, email, password, name, orgName s
 		orgName = name + "'s Inventory"
 	}
 
-	// Hash password with bcrypt cost 12
-	pwHash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	// Hash password with Argon2id
+	pwHash, err := HashPassword(password)
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
@@ -101,12 +100,12 @@ func (s *Service) Register(ctx context.Context, email, password, name, orgName s
 		return nil, fmt.Errorf("failed to create organization: %w", err)
 	}
 
-	// 2. Create Owner User (role: 'admin')
+	// 2. Create Owner User (role: 'owner')
 	now := time.Now()
 	_, err = tx.Exec(ctx, `
 		INSERT INTO users (user_id, org_id, email, password_hash, role, name, is_active, created_at)
-		VALUES ($1, $2, $3, $4, 'admin', $5, true, $6)
-	`, userID, orgID, email, string(pwHash), name, now)
+		VALUES ($1, $2, $3, $4, 'owner', $5, true, $6)
+	`, userID, orgID, email, pwHash, name, now)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique") {
 			return nil, ErrEmailExists
@@ -118,7 +117,7 @@ func (s *Service) Register(ctx context.Context, email, password, name, orgName s
 		return nil, fmt.Errorf("failed to commit registration: %w", err)
 	}
 
-	token, err := GenerateToken(userID, orgID, email, name, "admin")
+	token, err := GenerateToken(userID, orgID, email, name, "owner")
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
@@ -130,14 +129,14 @@ func (s *Service) Register(ctx context.Context, email, password, name, orgName s
 			OrgID:     orgID,
 			Email:     email,
 			Name:      name,
-			Role:      "admin",
+			Role:      "owner",
 			IsActive:  true,
 			CreatedAt: now,
 		},
 	}, nil
 }
 
-// Login authenticates a user by email and password, returning a signed JWT token.
+// Login authenticates a user by email and password, returning a signed JWT token and persisting a session.
 func (s *Service) Login(ctx context.Context, email, password string) (*AuthResponse, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
 	if email == "" || password == "" {
@@ -179,8 +178,9 @@ func (s *Service) Login(ctx context.Context, email, password string) (*AuthRespo
 		return nil, ErrUserInactive
 	}
 
-	// Compare bcrypt hash
-	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password)); err != nil {
+	// Verify password (supports Argon2id with Bcrypt backward-compatibility)
+	valid, err := VerifyPassword(passwordHash, password)
+	if err != nil || !valid {
 		return nil, ErrInvalidCredentials
 	}
 
@@ -193,6 +193,14 @@ func (s *Service) Login(ctx context.Context, email, password string) (*AuthRespo
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign authentication token: %w", err)
 	}
+
+	// Record Server-side session in PostgreSQL
+	sessionID := uuid.New().String()
+	expiresAt := time.Now().Add(30 * 24 * time.Hour)
+	_, _ = pool.Exec(ctx, `
+		INSERT INTO sessions (session_id, user_id, org_id, expires_at)
+		VALUES ($1, $2, $3, $4)
+	`, sessionID, userID, orgID, expiresAt)
 
 	return &AuthResponse{
 		Token: token,
@@ -252,4 +260,99 @@ func (s *Service) GetUserProfile(ctx context.Context, userID uuid.UUID) (*UserPr
 		IsActive:  isActive,
 		CreatedAt: createdAt,
 	}, nil
+}
+
+// Logout revokes a session by session ID.
+func (s *Service) Logout(ctx context.Context, sessionID string) error {
+	pool := s.tdb.Pool()
+	_, err := pool.Exec(ctx, "DELETE FROM sessions WHERE session_id = $1", sessionID)
+	return err
+}
+
+// ListUsers returns all users belonging to the specified organization.
+func (s *Service) ListUsers(ctx context.Context, orgID uuid.UUID) ([]UserProfile, error) {
+	pool := s.tdb.Pool()
+	rows, err := pool.Query(ctx, `
+		SELECT user_id, org_id, email::text, role, name, is_active, created_at
+		FROM users
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []UserProfile
+	for rows.Next() {
+		var u UserProfile
+		if err := rows.Scan(&u.ID, &u.OrgID, &u.Email, &u.Role, &u.Name, &u.IsActive, &u.CreatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan user: %w", err)
+		}
+		users = append(users, u)
+	}
+	return users, rows.Err()
+}
+
+// CreateUser adds a new user to an existing organization with an Argon2id hashed password.
+func (s *Service) CreateUser(ctx context.Context, orgID uuid.UUID, email, password, name, role string) (*UserProfile, error) {
+	email = strings.TrimSpace(strings.ToLower(email))
+	if email == "" || len(password) < 6 {
+		return nil, errors.New("valid email and password (minimum 6 characters) are required")
+	}
+
+	canonicalRole := CanonicalRole(role)
+	pwHash, err := HashPassword(password)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	userID := uuid.New()
+	now := time.Now()
+
+	pool := s.tdb.Pool()
+	_, err = pool.Exec(ctx, `
+		INSERT INTO users (user_id, org_id, email, password_hash, role, name, is_active, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, true, $7)
+	`, userID, orgID, email, pwHash, name, canonicalRole, now)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique") {
+			return nil, ErrEmailExists
+		}
+		return nil, fmt.Errorf("failed to insert user: %w", err)
+	}
+
+	return &UserProfile{
+		ID:        userID,
+		OrgID:     orgID,
+		Email:     email,
+		Name:      name,
+		Role:      canonicalRole,
+		IsActive:  true,
+		CreatedAt: now,
+	}, nil
+}
+
+// UpdateUser updates a user's role or active status.
+func (s *Service) UpdateUser(ctx context.Context, orgID, userID uuid.UUID, role string, isActive bool) (*UserProfile, error) {
+	canonicalRole := CanonicalRole(role)
+	pool := s.tdb.Pool()
+
+	var u UserProfile
+	err := pool.QueryRow(ctx, `
+		UPDATE users
+		SET role = $3, is_active = $4
+		WHERE user_id = $1 AND org_id = $2
+		RETURNING user_id, org_id, email::text, role, name, is_active, created_at
+	`, userID, orgID, canonicalRole, isActive).Scan(
+		&u.ID, &u.OrgID, &u.Email, &u.Role, &u.Name, &u.IsActive, &u.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrUserNotFound
+		}
+		return nil, fmt.Errorf("failed to update user: %w", err)
+	}
+
+	return &u, nil
 }

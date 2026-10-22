@@ -94,24 +94,6 @@ services:
       - "1025:1025"
       - "8025:8025"
 
-  clamav:
-    image: clamav/clamav:latest
-    container_name: whoopit_clamav
-    restart: unless-stopped
-    ports:
-      - "3310:3310"
-
-  pdf-sealer:
-    build:
-      context: ./backend/services/pdf-sealer
-      dockerfile: Dockerfile
-    container_name: whoopit_pdf_sealer
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    environment:
-      - PYTHONUNBUFFERED=1
-
 volumes:
   whoopit_pgdata:
     name: whoopit_pgdata

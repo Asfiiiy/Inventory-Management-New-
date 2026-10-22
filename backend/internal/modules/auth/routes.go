@@ -16,11 +16,21 @@ func RegisterRoutes(r chi.Router, tdb *database.TenantDB) {
 		// Public authentication endpoints
 		auth.Post("/register", h.Register)
 		auth.Post("/login", h.Login)
+		auth.Post("/logout", h.Logout)
+		auth.Post("/forgot-password", h.ForgotPassword)
 
 		// Protected user session endpoint
 		auth.Group(func(protected chi.Router) {
 			protected.Use(middleware.TenantMiddleware)
 			protected.Get("/me", h.Me)
 		})
+	})
+
+	// User management endpoints under /api/v1/users (Protected)
+	r.Route("/api/v1/users", func(users chi.Router) {
+		users.Use(middleware.TenantMiddleware)
+		users.Get("/", h.ListUsers)
+		users.Post("/", h.CreateUser)
+		users.Patch("/{id}", h.UpdateUser)
 	})
 }
