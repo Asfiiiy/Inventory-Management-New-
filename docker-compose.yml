@@ -11,7 +11,7 @@ services:
       - "5432:5432"
     volumes:
       - whoopit_pgdata:/var/lib/postgresql/data
-      - ./db/init-extensions.sql:/docker-entrypoint-initdb.d/00_init_extensions.sql:ro
+      - ./backend/db/init-extensions.sql:/docker-entrypoint-initdb.d/00_init_extensions.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U whoopit_admin -d whoopit_inventory_v4"]
       interval: 5s
@@ -36,7 +36,7 @@ services:
 
   api:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     container_name: whoopit_api
     restart: unless-stopped
@@ -59,7 +59,7 @@ services:
 
   web:
     build:
-      context: ./web
+      context: ./frontend
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_API_URL=http://localhost:8080
@@ -103,7 +103,7 @@ services:
 
   pdf-sealer:
     build:
-      context: ./services/pdf-sealer
+      context: ./backend/services/pdf-sealer
       dockerfile: Dockerfile
     container_name: whoopit_pdf_sealer
     restart: unless-stopped

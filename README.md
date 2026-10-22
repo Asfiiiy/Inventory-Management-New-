@@ -29,9 +29,9 @@ Whoopit IMS is engineered around clean domain separation, high-throughput financ
 └───────────────────────────────────┘
 ```
 
-* **Core API (`cmd/api/`, `internal/`)**: Written in Go 1.27 using `go-chi`, `pgx/v5` connection pooling, and structured logging (`log/slog`).
-* **Database Engine (`db/`)**: PostgreSQL 18 utilizing native Row-Level Security (`FORCE ROW LEVEL SECURITY`) with tenant isolation enforced at the database transaction layer via `SET LOCAL app.org_id`.
-* **Frontend Web App (`web/`)**: Built on Next.js 16 (React 19), Tailwind CSS v4, Lucide icons, Next Themes (dark/light mode), and client-side audio/print engines.
+* **Core API (`backend/cmd/api/`, `backend/internal/`)**: Written in Go 1.27 using `go-chi`, `pgx/v5` connection pooling, and structured logging (`log/slog`).
+* **Database Engine (`backend/db/`)**: PostgreSQL 18 utilizing native Row-Level Security (`FORCE ROW LEVEL SECURITY`) with tenant isolation enforced at the database transaction layer via `SET LOCAL app.org_id`.
+* **Frontend Web App (`frontend/`)**: Built on Next.js 16 (React 19), Tailwind CSS v4, Lucide icons, Next Themes (dark/light mode), and client-side audio/print engines.
 
 ---
 
@@ -64,7 +64,7 @@ Whoopit IMS is engineered around clean domain separation, high-throughput financ
 
 ### 4. Authentication, Session Management & RBAC
 * **Real JWT Authentication**: Passwords hashed with bcrypt (cost 12).
-* **Next.js Route Middleware (`web/src/middleware.ts`)**: Automatic session validation protecting application routes and redirecting unauthenticated traffic to `/login`.
+* **Next.js Route Middleware (`frontend/src/middleware.ts`)**: Automatic session validation protecting application routes and redirecting unauthenticated traffic to `/login`.
 * **Role-Based Access Control**:
   * 👑 **Role `admin`**: Full access to all screens, financial valuation, cost prices, product deletion, and stock adjustments.
   * 👤 **Role `staff`**: Operational access to inward purchases, outward sales, and product view & barcode printing. Restricted from viewing cost prices and inventory valuation; blocked from deleting products or performing manual stock adjustments.
@@ -123,19 +123,20 @@ docker compose up -d postgres valkey
 Migrations run automatically on container init, or you can run them manually:
 ```bash
 # Using migrate CLI or psql
-psql -h localhost -U whoopit_admin -d whoopit_inventory_v4 -f db/migrations/000001_init_core_and_ledger.up.sql
-psql -h localhost -U whoopit_admin -d whoopit_inventory_v4 -f db/migrations/000004_add_user_name.up.sql
+psql -h localhost -U whoopit_admin -d whoopit_inventory_v4 -f backend/db/migrations/000001_init_core_and_ledger.up.sql
+psql -h localhost -U whoopit_admin -d whoopit_inventory_v4 -f backend/db/migrations/000004_add_user_name.up.sql
 ```
 
 #### 3. Start Go Backend Core API
 ```bash
+cd backend
 go run ./cmd/api
 ```
 The API server starts on `:8080` with PostgreSQL RLS and Valkey cache connected.
 
 #### 4. Start Next.js Frontend
 ```bash
-cd web
+cd frontend
 npm install
 npm run dev
 ```
@@ -167,21 +168,27 @@ All inventory endpoints require authentication via `Authorization: Bearer <token
 ## 📁 Repository Structure
 
 ```
-├── cmd/
-│   └── api/                # Main entrypoint for Go Core HTTP API server
-├── internal/
-│   ├── middleware/         # JWT auth, RLS tenant context, RBAC guards
-│   ├── modules/
-│   │   ├── auth/           # Authentication handlers, service, and routes
-│   │   ├── catalog/        # Items & Locations master data handlers
-│   │   └── inventory/      # Double-entry stock ledger & balance service
-│   └── platform/
-│       ├── auth/           # JWT token generation & verification
-│       ├── database/       # PostgreSQL connection pool & RLS transaction wrappers
-│       └── http/           # Chi router, CORS middleware, RFC 7807 responses
-├── db/
-│   └── migrations/         # PostgreSQL DDL migrations (RLS policies, schema)
-├── web/
+├── backend/
+│   ├── cmd/api/            # Main entrypoint for Go Core HTTP API server
+│   ├── internal/
+│   │   ├── middleware/     # JWT auth, RLS tenant context, RBAC guards
+│   │   ├── modules/
+│   │   │   ├── auth/       # Authentication handlers, service, and routes
+│   │   │   ├── catalog/    # Items & Locations master data handlers
+│   │   │   └── inventory/  # Double-entry stock ledger & balance service
+│   │   └── platform/
+│   │       ├── auth/       # JWT token generation & verification
+│   │       ├── database/   # PostgreSQL connection pool & RLS transaction wrappers
+│   │       └── http/       # Chi router, CORS middleware, RFC 7807 responses
+│   ├── db/
+│   │   ├── migrations/     # PostgreSQL DDL migrations (RLS policies, schema)
+│   │   └── queries/        # SQL queries for sqlc code generation
+│   ├── services/
+│   │   └── pdf-sealer/     # Microservice for digital PDF evidence sealing
+│   ├── Dockerfile          # Production multi-stage Docker build for Go API
+│   ├── go.mod & go.sum     # Go dependency definitions
+│   └── sqlc.yaml           # SQL code generator config
+├── frontend/
 │   ├── src/
 │   │   ├── app/            # Next.js 16 App Router pages
 │   │   │   ├── login/      # Sleek login page with demo quick-fills
@@ -191,9 +198,12 @@ All inventory endpoints require authentication via `Authorization: Bearer <token
 │   │   │   └── adjustments/# Manual cycle counts & write-offs
 │   │   ├── components/     # UI primitives, modals, layout, barcode renderers
 │   │   └── lib/            # API client, auth context, inventory store, CSV export
-│   └── Dockerfile          # Production multi-stage Docker build for web
-├── Dockerfile              # Production multi-stage Docker build for Go API
+│   ├── public/             # Static SVGs and web assets
+│   ├── package.json        # Node dependencies & scripts
+│   ├── tsconfig.json       # TypeScript configuration
+│   └── Dockerfile          # Production multi-stage Docker build for frontend
 ├── docker-compose.yml      # Orchestration for full production stack
+├── Makefile                # Developer shortcuts (make dev-backend, dev-frontend)
 ├── .env.example            # Environment configuration template
 └── README.md               # System documentation & quick start guide
 ```
@@ -204,12 +214,13 @@ All inventory endpoints require authentication via `Authorization: Bearer <token
 
 Run backend unit and integration test suites:
 ```bash
+cd backend
 go test -v ./...
 ```
 
 Run frontend production build verification:
 ```bash
-cd web
+cd frontend
 npm run build
 ```
 

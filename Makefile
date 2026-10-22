@@ -1,4 +1,4 @@
-.PHONY: up down logs restart ps sqlc-gen test
+.PHONY: up down logs restart ps sqlc-gen test dev-backend dev-frontend build-frontend
 
 up:
 	docker compose up -d
@@ -15,8 +15,17 @@ restart:
 ps:
 	docker compose ps
 
+dev-backend:
+	cd backend && go run ./cmd/api
+
+dev-frontend:
+	cd frontend && npm run dev
+
+build-frontend:
+	cd frontend && npm run build
+
 sqlc-gen:
-	sqlc generate
+	cd backend && sqlc generate
 
 test:
-	go test -v ./...
+	cd backend && go test -v ./...
