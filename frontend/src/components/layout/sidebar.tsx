@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   FileSpreadsheet,
   Sliders,
+  Building2,
 } from "lucide-react";
 import { useInventory } from "@/lib/inventory-store";
 import { useAuth } from "@/lib/auth-context";
@@ -38,6 +39,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       label: "Dashboard",
       href: "/",
       icon: LayoutDashboard,
+    },
+    {
+      label: "Companies Tracked",
+      href: "/companies",
+      icon: Building2,
+      color: "text-indigo-400",
+      restricted: isStaff,
     },
     {
       label: "Products Master",

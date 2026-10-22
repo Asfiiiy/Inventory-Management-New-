@@ -105,15 +105,12 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => handleQuickFill("admin@whoopit.io", "AdminPass123!")}
-              className="flex flex-col items-start p-2.5 rounded-xl bg-purple-950/40 hover:bg-purple-900/50 border border-purple-500/30 hover:border-purple-500/60 transition-all text-left group"
+              className="flex flex-col items-start p-2.5 rounded-xl bg-indigo-950/40 hover:bg-indigo-900/50 border border-indigo-500/30 hover:border-indigo-500/60 transition-all text-left group"
             >
               <div className="flex items-center gap-1.5 w-full justify-between">
-                <span className="text-[11px] font-bold text-purple-300 flex items-center gap-1">
-                  <Crown className="w-3 h-3 text-amber-400" />
-                  SuperAdmin HQ
-                </span>
-                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40">
-                  Track Orgs
+                <span className="text-[11px] font-bold text-indigo-300">Admin</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                  Full Access
                 </span>
               </div>
               <span className="text-[10px] text-slate-400 font-mono mt-1 truncate w-full">
@@ -127,10 +124,7 @@ export default function LoginPage() {
               className="flex flex-col items-start p-2.5 rounded-xl bg-slate-800/40 hover:bg-slate-800/80 border border-slate-700/60 hover:border-slate-600 transition-all text-left group"
             >
               <div className="flex items-center gap-1.5 w-full justify-between">
-                <span className="text-[11px] font-bold text-amber-300 flex items-center gap-1">
-                  <Boxes className="w-3 h-3 text-amber-400" />
-                  Client Store
-                </span>
+                <span className="text-[11px] font-bold text-amber-300">Staff Member</span>
                 <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
                   Store Ops
                 </span>
@@ -140,17 +134,6 @@ export default function LoginPage() {
               </span>
             </button>
           </div>
-        </div>
-
-        {/* Direct Bypass Link if already authenticated */}
-        <div className="text-center">
-          <Link
-            href="/superadmin"
-            className="text-[11px] text-purple-400 hover:text-purple-300 transition-colors inline-flex items-center gap-1 font-medium"
-          >
-            <span>Already logged in as admin? Open SuperAdmin HQ</span>
-            <ArrowRight className="w-3 h-3" />
-          </Link>
         </div>
 
         {/* Main Card */}

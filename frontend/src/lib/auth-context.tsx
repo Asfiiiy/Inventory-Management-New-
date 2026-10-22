@@ -109,8 +109,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (targetRedirect) {
           router.push(targetRedirect);
-        } else if (receivedUser.role === "admin") {
-          router.push("/superadmin");
         } else {
           router.push("/");
         }

@@ -97,17 +97,6 @@ export function Header() {
 
       {/* Right Controls: Quick Actions, Low Stock Bell, Theme, User */}
       <div className="flex items-center gap-2.5">
-        {isSuperAdmin && (
-          <Link
-            href="/superadmin"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20 text-xs font-bold transition-all shadow-xs"
-            title="SuperAdmin HQ & Client Companies Manager"
-          >
-            <Crown className="w-3.5 h-3.5 text-amber-500" />
-            <span className="hidden sm:inline">SuperAdmin HQ</span>
-          </Link>
-        )}
-
         {/* Quick In / Out Action Buttons */}
         <Link
           href="/stock-in"
