@@ -440,3 +440,48 @@ func (h *Handler) FulfillReservation(w http.ResponseWriter, r *http.Request) {
 	platformHttp.RespondJSON(w, http.StatusOK, fulfilled, nil)
 }
 
+// -----------------------------------------------------------------------------
+// Stock Alerts & Ledger Reconciliation Handlers
+// -----------------------------------------------------------------------------
+
+// GetStockAlerts returns low stock and buffer alerts with replenishment suggestions.
+func (h *Handler) GetStockAlerts(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := middleware.GetTenantID(r.Context())
+	if !ok {
+		platformHttp.RespondProblem(w, r, http.StatusUnauthorized, "Unauthorized", "Tenant context missing", nil)
+		return
+	}
+
+	alerts, err := h.service.GetStockAlerts(r.Context(), orgID)
+	if err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "Internal Server Error", err.Error(), nil)
+		return
+	}
+
+	platformHttp.RespondJSON(w, http.StatusOK, alerts, map[string]any{"count": len(alerts)})
+}
+
+// ReconcileItem reconciles append-only movements against cached balances for an item.
+func (h *Handler) ReconcileItem(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := middleware.GetTenantID(r.Context())
+	if !ok {
+		platformHttp.RespondProblem(w, r, http.StatusUnauthorized, "Unauthorized", "Tenant context missing", nil)
+		return
+	}
+
+	idStr := chi.URLParam(r, "id")
+	itemID, err := uuid.Parse(idStr)
+	if err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusBadRequest, "Invalid ID", "Invalid item UUID parameter", nil)
+		return
+	}
+
+	report, err := h.service.ReconcileItemLedger(r.Context(), orgID, itemID)
+	if err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "Internal Server Error", err.Error(), nil)
+		return
+	}
+
+	platformHttp.RespondJSON(w, http.StatusOK, report, nil)
+}
+

@@ -21,14 +21,20 @@ type ReconciliationArgs struct {
 
 func (ReconciliationArgs) Kind() string { return "reconciliation_audit" }
 
+// ItemReconciler allows pluggable reconciliation execution from the inventory module.
+type ItemReconciler interface {
+	Reconcile(ctx context.Context, orgID, itemID uuid.UUID) error
+}
+
 // ReconciliationWorker runs asynchronous consistency audits between stock_moves and location balances.
 type ReconciliationWorker struct {
 	river.WorkerDefaults[ReconciliationArgs]
-	db *database.TenantDB
+	db         *database.TenantDB
+	reconciler ItemReconciler
 }
 
-func NewReconciliationWorker(tdb *database.TenantDB) *ReconciliationWorker {
-	return &ReconciliationWorker{db: tdb}
+func NewReconciliationWorker(tdb *database.TenantDB, reconciler ItemReconciler) *ReconciliationWorker {
+	return &ReconciliationWorker{db: tdb, reconciler: reconciler}
 }
 
 func (w *ReconciliationWorker) Work(ctx context.Context, job *river.Job[ReconciliationArgs]) error {
@@ -36,6 +42,16 @@ func (w *ReconciliationWorker) Work(ctx context.Context, job *river.Job[Reconcil
 		slog.String("org_id", job.Args.OrgID.String()),
 		slog.String("item_id", job.Args.ItemID.String()),
 	)
+	if w.reconciler != nil {
+		if err := w.reconciler.Reconcile(ctx, job.Args.OrgID, job.Args.ItemID); err != nil {
+			slog.Error("background ledger reconciliation failed",
+				slog.String("org_id", job.Args.OrgID.String()),
+				slog.String("item_id", job.Args.ItemID.String()),
+				slog.Any("error", err),
+			)
+			return err
+		}
+	}
 	return nil
 }
 
@@ -45,9 +61,9 @@ type Client struct {
 }
 
 // NewClient initializes the River queue client with workers registered.
-func NewClient(pool *pgxpool.Pool, tdb *database.TenantDB) (*Client, error) {
+func NewClient(pool *pgxpool.Pool, tdb *database.TenantDB, reconciler ItemReconciler) (*Client, error) {
 	workers := river.NewWorkers()
-	river.AddWorker(workers, NewReconciliationWorker(tdb))
+	river.AddWorker(workers, NewReconciliationWorker(tdb, reconciler))
 
 	riverClient, err := river.NewClient(riverpgxv5.New(pool), &river.Config{
 		Workers: workers,

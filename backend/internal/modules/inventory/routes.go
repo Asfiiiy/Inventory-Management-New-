@@ -28,5 +28,9 @@ func RegisterRoutes(r chi.Router, tdb *database.TenantDB) {
 
 		// Stock Summary with 4-Tier Badges & Location Breakdown
 		stock.Get("/api/v1/stock/items/{id}/summary", h.GetItemStockSummary)
+
+		// Stock Alerts & Ledger Reconciliation
+		stock.Get("/api/v1/stock/alerts", h.GetStockAlerts)
+		stock.Post("/api/v1/stock/items/{id}/reconcile", h.ReconcileItem)
 	})
 }
