@@ -26,7 +26,7 @@ INSERT INTO locations (
     $3,
     $4
 )
-RETURNING location_id, org_id, name, category, parent_id, path, is_active, created_at
+RETURNING location_id, org_id, name, category, parent_id, path, is_active, created_at, is_backup_location
 `
 
 type CreateLocationParams struct {
@@ -55,13 +55,13 @@ func (q *Queries) CreateLocation(ctx context.Context, arg CreateLocationParams) 
 		&i.Path,
 		&i.IsActive,
 		&i.CreatedAt,
+		&i.IsBackupLocation,
 	)
 	return i, err
 }
 
 const getLocationByCategory = `-- name: GetLocationByCategory :one
-SELECT location_id, org_id, name, category, parent_id, path, is_active, created_at
-FROM locations
+SELECT location_id, org_id, name, category, parent_id, path, is_active, created_at, is_backup_location FROM locations
 WHERE org_id = $1 AND category = $2
 LIMIT 1
 `
@@ -83,13 +83,13 @@ func (q *Queries) GetLocationByCategory(ctx context.Context, arg GetLocationByCa
 		&i.Path,
 		&i.IsActive,
 		&i.CreatedAt,
+		&i.IsBackupLocation,
 	)
 	return i, err
 }
 
 const getLocationByID = `-- name: GetLocationByID :one
-SELECT location_id, org_id, name, category, parent_id, path, is_active, created_at
-FROM locations
+SELECT location_id, org_id, name, category, parent_id, path, is_active, created_at, is_backup_location FROM locations
 WHERE location_id = $1 AND org_id = $2
 LIMIT 1
 `
@@ -111,13 +111,13 @@ func (q *Queries) GetLocationByID(ctx context.Context, arg GetLocationByIDParams
 		&i.Path,
 		&i.IsActive,
 		&i.CreatedAt,
+		&i.IsBackupLocation,
 	)
 	return i, err
 }
 
 const getSubtreeLocations = `-- name: GetSubtreeLocations :many
-SELECT location_id, org_id, name, category, parent_id, path, is_active, created_at
-FROM locations
+SELECT location_id, org_id, name, category, parent_id, path, is_active, created_at, is_backup_location FROM locations
 WHERE org_id = $1 AND path <@ $2::ltree
 ORDER BY path ASC
 `
@@ -145,6 +145,7 @@ func (q *Queries) GetSubtreeLocations(ctx context.Context, arg GetSubtreeLocatio
 			&i.Path,
 			&i.IsActive,
 			&i.CreatedAt,
+			&i.IsBackupLocation,
 		); err != nil {
 			return nil, err
 		}
@@ -157,8 +158,7 @@ func (q *Queries) GetSubtreeLocations(ctx context.Context, arg GetSubtreeLocatio
 }
 
 const listLocationsByParent = `-- name: ListLocationsByParent :many
-SELECT location_id, org_id, name, category, parent_id, path, is_active, created_at
-FROM locations
+SELECT location_id, org_id, name, category, parent_id, path, is_active, created_at, is_backup_location FROM locations
 WHERE org_id = $1 AND parent_id IS NOT DISTINCT FROM $2
 ORDER BY name ASC
 `
@@ -186,6 +186,7 @@ func (q *Queries) ListLocationsByParent(ctx context.Context, arg ListLocationsBy
 			&i.Path,
 			&i.IsActive,
 			&i.CreatedAt,
+			&i.IsBackupLocation,
 		); err != nil {
 			return nil, err
 		}

@@ -43,7 +43,12 @@ INSERT INTO stock_moves (
     quantity,
     move_type,
     reference_code,
-    actor_id
+    actor_id,
+    idempotency_key,
+    usage_target,
+    batch_number,
+    expiry_date,
+    unit_cost
 ) VALUES (
     COALESCE($8, gen_random_uuid()),
     $1,
@@ -53,9 +58,14 @@ INSERT INTO stock_moves (
     $5,
     $6,
     $9,
-    $7
+    $7,
+    $10,
+    $11,
+    $12,
+    $13,
+    COALESCE($14, 0)
 )
-RETURNING move_id, org_id, item_id, from_location_id, to_location_id, quantity, move_type, reference_code, actor_id, created_at
+RETURNING move_id, org_id, item_id, from_location_id, to_location_id, quantity, move_type, reference_code, actor_id, created_at, idempotency_key, usage_target, batch_number, expiry_date, unit_cost
 `
 
 type CreateStockMoveParams struct {
@@ -68,6 +78,11 @@ type CreateStockMoveParams struct {
 	ActorID        uuid.UUID      `json:"actor_id"`
 	MoveID         interface{}    `json:"move_id"`
 	ReferenceCode  pgtype.Text    `json:"reference_code"`
+	IdempotencyKey pgtype.Text    `json:"idempotency_key"`
+	UsageTarget    pgtype.Text    `json:"usage_target"`
+	BatchNumber    pgtype.Text    `json:"batch_number"`
+	ExpiryDate     pgtype.Date    `json:"expiry_date"`
+	UnitCost       interface{}    `json:"unit_cost"`
 }
 
 func (q *Queries) CreateStockMove(ctx context.Context, arg CreateStockMoveParams) (StockMove, error) {
@@ -81,6 +96,11 @@ func (q *Queries) CreateStockMove(ctx context.Context, arg CreateStockMoveParams
 		arg.ActorID,
 		arg.MoveID,
 		arg.ReferenceCode,
+		arg.IdempotencyKey,
+		arg.UsageTarget,
+		arg.BatchNumber,
+		arg.ExpiryDate,
+		arg.UnitCost,
 	)
 	var i StockMove
 	err := row.Scan(
@@ -94,6 +114,11 @@ func (q *Queries) CreateStockMove(ctx context.Context, arg CreateStockMoveParams
 		&i.ReferenceCode,
 		&i.ActorID,
 		&i.CreatedAt,
+		&i.IdempotencyKey,
+		&i.UsageTarget,
+		&i.BatchNumber,
+		&i.ExpiryDate,
+		&i.UnitCost,
 	)
 	return i, err
 }
@@ -138,8 +163,7 @@ func (q *Queries) CreateStockMoveLine(ctx context.Context, arg CreateStockMoveLi
 }
 
 const listMoveLinesByMoveID = `-- name: ListMoveLinesByMoveID :many
-SELECT line_id, move_id, tracking_number, quantity
-FROM stock_move_lines
+SELECT line_id, move_id, tracking_number, quantity FROM stock_move_lines
 WHERE move_id = $1
 `
 
@@ -169,8 +193,7 @@ func (q *Queries) ListMoveLinesByMoveID(ctx context.Context, moveID uuid.UUID) (
 }
 
 const listMovesByItem = `-- name: ListMovesByItem :many
-SELECT move_id, org_id, item_id, from_location_id, to_location_id, quantity, move_type, reference_code, actor_id, created_at
-FROM stock_moves
+SELECT move_id, org_id, item_id, from_location_id, to_location_id, quantity, move_type, reference_code, actor_id, created_at, idempotency_key, usage_target, batch_number, expiry_date, unit_cost FROM stock_moves
 WHERE org_id = $1 AND item_id = $2
 ORDER BY created_at DESC
 `
@@ -200,6 +223,11 @@ func (q *Queries) ListMovesByItem(ctx context.Context, arg ListMovesByItemParams
 			&i.ReferenceCode,
 			&i.ActorID,
 			&i.CreatedAt,
+			&i.IdempotencyKey,
+			&i.UsageTarget,
+			&i.BatchNumber,
+			&i.ExpiryDate,
+			&i.UnitCost,
 		); err != nil {
 			return nil, err
 		}
@@ -212,8 +240,7 @@ func (q *Queries) ListMovesByItem(ctx context.Context, arg ListMovesByItemParams
 }
 
 const listStockMoves = `-- name: ListStockMoves :many
-SELECT move_id, org_id, item_id, from_location_id, to_location_id, quantity, move_type, reference_code, actor_id, created_at
-FROM stock_moves
+SELECT move_id, org_id, item_id, from_location_id, to_location_id, quantity, move_type, reference_code, actor_id, created_at, idempotency_key, usage_target, batch_number, expiry_date, unit_cost FROM stock_moves
 WHERE org_id = $1
   AND ($2::uuid IS NULL OR item_id = $2)
   AND ($3::uuid IS NULL OR from_location_id = $3 OR to_location_id = $3)
@@ -255,6 +282,11 @@ func (q *Queries) ListStockMoves(ctx context.Context, arg ListStockMovesParams) 
 			&i.ReferenceCode,
 			&i.ActorID,
 			&i.CreatedAt,
+			&i.IdempotencyKey,
+			&i.UsageTarget,
+			&i.BatchNumber,
+			&i.ExpiryDate,
+			&i.UnitCost,
 		); err != nil {
 			return nil, err
 		}

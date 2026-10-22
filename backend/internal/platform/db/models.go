@@ -22,6 +22,24 @@ type AssetAssignment struct {
 	ConditionGrade     pgtype.Text        `json:"condition_grade"`
 }
 
+type Category struct {
+	CategoryID uuid.UUID          `json:"category_id"`
+	OrgID      uuid.UUID          `json:"org_id"`
+	Name       string             `json:"name"`
+	ParentID   pgtype.UUID        `json:"parent_id"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+}
+
+type CustomFieldDefinition struct {
+	FieldID         uuid.UUID          `json:"field_id"`
+	OrgID           uuid.UUID          `json:"org_id"`
+	FieldName       string             `json:"field_name"`
+	FieldType       string             `json:"field_type"`
+	DropdownOptions json.RawMessage    `json:"dropdown_options"`
+	IsRequired      bool               `json:"is_required"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
 type HandoverEvidence struct {
 	EvidenceID   uuid.UUID          `json:"evidence_id"`
 	OrgID        uuid.UUID          `json:"org_id"`
@@ -44,17 +62,26 @@ type Item struct {
 	IsActive        bool               `json:"is_active"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	ReorderLevel    pgtype.Numeric     `json:"reorder_level"`
+	BufferStock     pgtype.Numeric     `json:"buffer_stock"`
+	CostPrice       pgtype.Numeric     `json:"cost_price"`
+	SellingPrice    pgtype.Numeric     `json:"selling_price"`
+	CategoryID      pgtype.UUID        `json:"category_id"`
+	SupplierID      pgtype.UUID        `json:"supplier_id"`
+	Barcode         pgtype.Text        `json:"barcode"`
+	ImageUrl        pgtype.Text        `json:"image_url"`
 }
 
 type Location struct {
-	LocationID uuid.UUID          `json:"location_id"`
-	OrgID      uuid.UUID          `json:"org_id"`
-	Name       string             `json:"name"`
-	Category   interface{}        `json:"category"`
-	ParentID   pgtype.UUID        `json:"parent_id"`
-	Path       string             `json:"path"`
-	IsActive   bool               `json:"is_active"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	LocationID       uuid.UUID          `json:"location_id"`
+	OrgID            uuid.UUID          `json:"org_id"`
+	Name             string             `json:"name"`
+	Category         interface{}        `json:"category"`
+	ParentID         pgtype.UUID        `json:"parent_id"`
+	Path             string             `json:"path"`
+	IsActive         bool               `json:"is_active"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	IsBackupLocation bool               `json:"is_backup_location"`
 }
 
 type Lot struct {
@@ -74,6 +101,41 @@ type Organization struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type OrganizationSetting struct {
+	OrgID              uuid.UUID          `json:"org_id"`
+	AllowNegativeStock bool               `json:"allow_negative_stock"`
+	Currency           string             `json:"currency"`
+	TimeZone           string             `json:"time_zone"`
+	AlertEmail         pgtype.Text        `json:"alert_email"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Reservation struct {
+	ReservationID uuid.UUID          `json:"reservation_id"`
+	OrgID         uuid.UUID          `json:"org_id"`
+	ItemID        uuid.UUID          `json:"item_id"`
+	LocationID    uuid.UUID          `json:"location_id"`
+	Quantity      pgtype.Numeric     `json:"quantity"`
+	Kind          string             `json:"kind"`
+	Target        string             `json:"target"`
+	Status        string             `json:"status"`
+	DueBackDate   pgtype.Timestamptz `json:"due_back_date"`
+	CreatedBy     uuid.UUID          `json:"created_by"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+}
+
+type StockBalance struct {
+	BalanceID  uuid.UUID          `json:"balance_id"`
+	OrgID      uuid.UUID          `json:"org_id"`
+	ItemID     uuid.UUID          `json:"item_id"`
+	LocationID uuid.UUID          `json:"location_id"`
+	OnHand     pgtype.Numeric     `json:"on_hand"`
+	Reserved   pgtype.Numeric     `json:"reserved"`
+	CheckedOut pgtype.Numeric     `json:"checked_out"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+}
+
 type StockMove struct {
 	MoveID         uuid.UUID          `json:"move_id"`
 	OrgID          uuid.UUID          `json:"org_id"`
@@ -85,6 +147,11 @@ type StockMove struct {
 	ReferenceCode  pgtype.Text        `json:"reference_code"`
 	ActorID        uuid.UUID          `json:"actor_id"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	IdempotencyKey pgtype.Text        `json:"idempotency_key"`
+	UsageTarget    pgtype.Text        `json:"usage_target"`
+	BatchNumber    pgtype.Text        `json:"batch_number"`
+	ExpiryDate     pgtype.Date        `json:"expiry_date"`
+	UnitCost       pgtype.Numeric     `json:"unit_cost"`
 }
 
 type StockMoveLine struct {
@@ -92,6 +159,36 @@ type StockMoveLine struct {
 	MoveID         uuid.UUID      `json:"move_id"`
 	TrackingNumber string         `json:"tracking_number"`
 	Quantity       pgtype.Numeric `json:"quantity"`
+}
+
+type Supplier struct {
+	SupplierID uuid.UUID          `json:"supplier_id"`
+	OrgID      uuid.UUID          `json:"org_id"`
+	Name       string             `json:"name"`
+	Phone      pgtype.Text        `json:"phone"`
+	Email      pgtype.Text        `json:"email"`
+	Address    pgtype.Text        `json:"address"`
+	Notes      pgtype.Text        `json:"notes"`
+	IsActive   bool               `json:"is_active"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+}
+
+type UnitsOfMeasure struct {
+	UnitID    uuid.UUID          `json:"unit_id"`
+	OrgID     uuid.UUID          `json:"org_id"`
+	Name      string             `json:"name"`
+	Symbol    string             `json:"symbol"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type UomConversion struct {
+	ConversionID uuid.UUID          `json:"conversion_id"`
+	OrgID        uuid.UUID          `json:"org_id"`
+	ItemID       pgtype.UUID        `json:"item_id"`
+	FromUnit     string             `json:"from_unit"`
+	ToBaseUnit   string             `json:"to_base_unit"`
+	Multiplier   pgtype.Numeric     `json:"multiplier"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
 
 type User struct {
@@ -102,4 +199,5 @@ type User struct {
 	Role         string             `json:"role"`
 	IsActive     bool               `json:"is_active"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	Name         string             `json:"name"`
 }

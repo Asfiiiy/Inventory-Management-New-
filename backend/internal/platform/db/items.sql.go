@@ -32,7 +32,7 @@ INSERT INTO items (
     COALESCE($7::valuation_method, 'fifo'::valuation_method),
     COALESCE($8, '{}'::jsonb)
 )
-RETURNING item_id, org_id, sku, name, tracking_mode, base_uom, valuation_method, attributes, is_active, created_at, updated_at
+RETURNING item_id, org_id, sku, name, tracking_mode, base_uom, valuation_method, attributes, is_active, created_at, updated_at, reorder_level, buffer_stock, cost_price, selling_price, category_id, supplier_id, barcode, image_url
 `
 
 type CreateItemParams struct {
@@ -70,13 +70,20 @@ func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (Item, e
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ReorderLevel,
+		&i.BufferStock,
+		&i.CostPrice,
+		&i.SellingPrice,
+		&i.CategoryID,
+		&i.SupplierID,
+		&i.Barcode,
+		&i.ImageUrl,
 	)
 	return i, err
 }
 
 const getItemByID = `-- name: GetItemByID :one
-SELECT item_id, org_id, sku, name, tracking_mode, base_uom, valuation_method, attributes, is_active, created_at, updated_at
-FROM items
+SELECT item_id, org_id, sku, name, tracking_mode, base_uom, valuation_method, attributes, is_active, created_at, updated_at, reorder_level, buffer_stock, cost_price, selling_price, category_id, supplier_id, barcode, image_url FROM items
 WHERE item_id = $1 AND org_id = $2
 LIMIT 1
 `
@@ -101,13 +108,20 @@ func (q *Queries) GetItemByID(ctx context.Context, arg GetItemByIDParams) (Item,
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ReorderLevel,
+		&i.BufferStock,
+		&i.CostPrice,
+		&i.SellingPrice,
+		&i.CategoryID,
+		&i.SupplierID,
+		&i.Barcode,
+		&i.ImageUrl,
 	)
 	return i, err
 }
 
 const getItemBySKU = `-- name: GetItemBySKU :one
-SELECT item_id, org_id, sku, name, tracking_mode, base_uom, valuation_method, attributes, is_active, created_at, updated_at
-FROM items
+SELECT item_id, org_id, sku, name, tracking_mode, base_uom, valuation_method, attributes, is_active, created_at, updated_at, reorder_level, buffer_stock, cost_price, selling_price, category_id, supplier_id, barcode, image_url FROM items
 WHERE sku = $1 AND org_id = $2
 LIMIT 1
 `
@@ -132,18 +146,26 @@ func (q *Queries) GetItemBySKU(ctx context.Context, arg GetItemBySKUParams) (Ite
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ReorderLevel,
+		&i.BufferStock,
+		&i.CostPrice,
+		&i.SellingPrice,
+		&i.CategoryID,
+		&i.SupplierID,
+		&i.Barcode,
+		&i.ImageUrl,
 	)
 	return i, err
 }
 
 const getItemBySKUOrBarcode = `-- name: GetItemBySKUOrBarcode :one
-SELECT item_id, org_id, sku, name, tracking_mode, base_uom, valuation_method, attributes, is_active, created_at, updated_at
-FROM items
+SELECT item_id, org_id, sku, name, tracking_mode, base_uom, valuation_method, attributes, is_active, created_at, updated_at, reorder_level, buffer_stock, cost_price, selling_price, category_id, supplier_id, barcode, image_url FROM items
 WHERE org_id = $1
   AND (
     sku = $2 
     OR attributes->>'barcode_upc' = $2 
     OR attributes->>'barcode' = $2
+    OR barcode = $2
   )
 LIMIT 1
 `
@@ -168,6 +190,14 @@ func (q *Queries) GetItemBySKUOrBarcode(ctx context.Context, arg GetItemBySKUOrB
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ReorderLevel,
+		&i.BufferStock,
+		&i.CostPrice,
+		&i.SellingPrice,
+		&i.CategoryID,
+		&i.SupplierID,
+		&i.Barcode,
+		&i.ImageUrl,
 	)
 	return i, err
 }
@@ -206,8 +236,7 @@ func (q *Queries) LockItemForUpdate(ctx context.Context, arg LockItemForUpdatePa
 }
 
 const searchItemsByAttribute = `-- name: SearchItemsByAttribute :many
-SELECT item_id, org_id, sku, name, tracking_mode, base_uom, valuation_method, attributes, is_active, created_at, updated_at
-FROM items
+SELECT item_id, org_id, sku, name, tracking_mode, base_uom, valuation_method, attributes, is_active, created_at, updated_at, reorder_level, buffer_stock, cost_price, selling_price, category_id, supplier_id, barcode, image_url FROM items
 WHERE org_id = $1 AND attributes @> $2::jsonb
 ORDER BY name ASC
 `
@@ -238,6 +267,14 @@ func (q *Queries) SearchItemsByAttribute(ctx context.Context, arg SearchItemsByA
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ReorderLevel,
+			&i.BufferStock,
+			&i.CostPrice,
+			&i.SellingPrice,
+			&i.CategoryID,
+			&i.SupplierID,
+			&i.Barcode,
+			&i.ImageUrl,
 		); err != nil {
 			return nil, err
 		}

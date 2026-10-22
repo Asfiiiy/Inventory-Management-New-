@@ -12,28 +12,24 @@ INSERT INTO locations (
     $3,
     $4
 )
-RETURNING location_id, org_id, name, category, parent_id, path, is_active, created_at;
+RETURNING *;
 
 -- name: GetLocationByID :one
-SELECT location_id, org_id, name, category, parent_id, path, is_active, created_at
-FROM locations
+SELECT * FROM locations
 WHERE location_id = $1 AND org_id = $2
 LIMIT 1;
 
 -- name: ListLocationsByParent :many
-SELECT location_id, org_id, name, category, parent_id, path, is_active, created_at
-FROM locations
+SELECT * FROM locations
 WHERE org_id = $1 AND parent_id IS NOT DISTINCT FROM $2
 ORDER BY name ASC;
 
 -- name: GetSubtreeLocations :many
-SELECT location_id, org_id, name, category, parent_id, path, is_active, created_at
-FROM locations
+SELECT * FROM locations
 WHERE org_id = $1 AND path <@ sqlc.arg('path')::ltree
 ORDER BY path ASC;
 
 -- name: GetLocationByCategory :one
-SELECT location_id, org_id, name, category, parent_id, path, is_active, created_at
-FROM locations
+SELECT * FROM locations
 WHERE org_id = $1 AND category = $2
 LIMIT 1;

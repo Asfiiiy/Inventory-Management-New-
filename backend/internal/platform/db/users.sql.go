@@ -20,7 +20,7 @@ INSERT INTO users (
     role
 ) VALUES (
     $1, $2, $3, $4, $5
-) RETURNING user_id, org_id, email, password_hash, role, is_active, created_at
+) RETURNING user_id, org_id, email, password_hash, role, is_active, created_at, name
 `
 
 type CreateUserParams struct {
@@ -48,12 +48,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Role,
 		&i.IsActive,
 		&i.CreatedAt,
+		&i.Name,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT user_id, org_id, email, password_hash, role, is_active, created_at FROM users
+SELECT user_id, org_id, email, password_hash, role, is_active, created_at, name FROM users
 WHERE user_id = $1 AND org_id = current_org_id()
 `
 
@@ -68,6 +69,7 @@ func (q *Queries) GetUserByID(ctx context.Context, userID uuid.UUID) (User, erro
 		&i.Role,
 		&i.IsActive,
 		&i.CreatedAt,
+		&i.Name,
 	)
 	return i, err
 }
