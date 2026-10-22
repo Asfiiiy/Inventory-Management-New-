@@ -108,9 +108,9 @@ export default function LoginPage() {
               className="flex flex-col items-start p-2.5 rounded-xl bg-indigo-950/40 hover:bg-indigo-900/50 border border-indigo-500/30 hover:border-indigo-500/60 transition-all text-left group"
             >
               <div className="flex items-center gap-1.5 w-full justify-between">
-                <span className="text-[11px] font-bold text-indigo-300">Admin</span>
+                <span className="text-[11px] font-bold text-indigo-300">1. Admin (Hum)</span>
                 <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
-                  Full Access
+                  Admin Portal
                 </span>
               </div>
               <span className="text-[10px] text-slate-400 font-mono mt-1 truncate w-full">
@@ -124,9 +124,9 @@ export default function LoginPage() {
               className="flex flex-col items-start p-2.5 rounded-xl bg-slate-800/40 hover:bg-slate-800/80 border border-slate-700/60 hover:border-slate-600 transition-all text-left group"
             >
               <div className="flex items-center gap-1.5 w-full justify-between">
-                <span className="text-[11px] font-bold text-amber-300">Staff Member</span>
+                <span className="text-[11px] font-bold text-amber-300">2. Software User</span>
                 <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                  Store Ops
+                  Store Software
                 </span>
               </div>
               <span className="text-[10px] text-slate-400 font-mono mt-1 truncate w-full">

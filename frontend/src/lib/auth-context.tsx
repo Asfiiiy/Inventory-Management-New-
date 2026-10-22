@@ -109,6 +109,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (targetRedirect) {
           router.push(targetRedirect);
+        } else if (receivedUser.role === "admin" || receivedUser.email === "admin@whoopit.io") {
+          router.push("/admin");
         } else {
           router.push("/");
         }

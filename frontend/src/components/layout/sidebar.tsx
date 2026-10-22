@@ -41,13 +41,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       icon: LayoutDashboard,
     },
     {
-      label: "Companies Tracked",
-      href: "/companies",
-      icon: Building2,
-      color: "text-indigo-400",
-      restricted: isStaff,
-    },
-    {
       label: "Products Master",
       href: "/products",
       icon: Package,

@@ -97,6 +97,17 @@ export function Header() {
 
       {/* Right Controls: Quick Actions, Low Stock Bell, Theme, User */}
       <div className="flex items-center gap-2.5">
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-xs font-bold transition-all shadow-xs"
+            title="Go to Admin Portal"
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Admin Portal</span>
+          </Link>
+        )}
+
         {/* Quick In / Out Action Buttons */}
         <Link
           href="/stock-in"
