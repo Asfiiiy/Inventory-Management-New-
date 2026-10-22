@@ -73,9 +73,9 @@ interface InventoryContextType {
   updateProduct: (id: string, product: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
   stockIn: (data: {
-
     productId: string;
     quantity: number;
+    unit?: string;
     supplierName: string;
     reference: string;
     unitCost?: number;
@@ -364,20 +364,23 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const stockIn = async (data: {
     productId: string;
     quantity: number;
+    unit?: string;
     supplierName: string;
     reference: string;
     unitCost?: number;
   }): Promise<{ success: boolean; error?: string }> => {
     try {
-      const qty = Math.max(1, Number(data.quantity) || 1);
+      const qty = Math.max(0.01, Number(data.quantity) || 1);
 
       await apiClient.stock.createMove({
         item_id: data.productId,
         from_location_id: locations.vendorId,
         to_location_id: locations.warehouseId,
         quantity: qty,
+        unit: data.unit || undefined,
         move_type: "INWARD_RECEIPT",
         reference_code: data.reference,
+        idempotency_key: `IN-${data.reference}-${Date.now()}`,
       });
 
       await fetchBackendData();

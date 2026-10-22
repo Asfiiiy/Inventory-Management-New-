@@ -204,8 +204,10 @@ export const apiClient = {
       from_location_id: string;
       to_location_id: string;
       quantity: number;
+      unit?: string;
       move_type: string;
       reference_code?: string;
+      idempotency_key?: string;
     }) =>
       request<{ success: boolean; data: { move: any } }>("/api/v1/stock/moves", {
         method: "POST",
