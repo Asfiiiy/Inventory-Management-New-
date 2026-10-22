@@ -20,6 +20,7 @@ var (
 	ErrInvalidLineQty    = errors.New("serialized item move lines must each have quantity 1.0 and sum to move quantity")
 	ErrItemNotFound      = errors.New("item not found")
 	ErrLocationNotFound  = errors.New("location not found")
+	ErrNoUOMConversion   = errors.New("no valid unit conversion rule found")
 )
 
 type MoveLineInput struct {
@@ -33,8 +34,10 @@ type ExecuteMoveInput struct {
 	FromLocationID uuid.UUID       `json:"from_location_id"`
 	ToLocationID   uuid.UUID       `json:"to_location_id"`
 	Quantity       float64         `json:"quantity"`
+	Unit           string          `json:"unit,omitempty"`
 	MoveType       string          `json:"move_type"`
 	ReferenceCode  string          `json:"reference_code,omitempty"`
+	IdempotencyKey string          `json:"idempotency_key,omitempty"`
 	ActorID        uuid.UUID       `json:"actor_id"`
 	Lines          []MoveLineInput `json:"lines,omitempty"`
 }
@@ -63,11 +66,31 @@ func (s *StockMovementService) ExecuteMove(ctx context.Context, input ExecuteMov
 		input.ActorID = uuid.New()
 	}
 
+	// Idempotency Deduplication Check
+	if input.IdempotencyKey != "" {
+		pool := s.db.Pool()
+		var existing db.StockMove
+		err := pool.QueryRow(ctx, `
+			SELECT move_id, org_id, item_id, from_location_id, to_location_id, quantity, move_type, reference_code, actor_id, created_at, idempotency_key, usage_target, batch_number, expiry_date, unit_cost
+			FROM stock_moves
+			WHERE org_id = $1 AND idempotency_key = $2
+		`, input.OrgID, input.IdempotencyKey).Scan(
+			&existing.MoveID, &existing.OrgID, &existing.ItemID,
+			&existing.FromLocationID, &existing.ToLocationID, &existing.Quantity,
+			&existing.MoveType, &existing.ReferenceCode, &existing.ActorID,
+			&existing.CreatedAt, &existing.IdempotencyKey, &existing.UsageTarget,
+			&existing.BatchNumber, &existing.ExpiryDate, &existing.UnitCost,
+		)
+		if err == nil {
+			return &MoveResult{Move: existing}, nil
+		}
+	}
+
 	var result MoveResult
 
-	err := s.db.WithTenantTx(ctx, input.OrgID, func(q *db.Queries) error {
+	err := s.db.WithTenantTxRaw(ctx, input.OrgID, func(q *db.Queries, tx pgx.Tx) error {
 		// Step 1: Pessimistic Lock on Item row to serialize concurrent movements
-		item, err := q.LockItemForUpdate(ctx, db.LockItemForUpdateParams{
+		_, err := q.LockItemForUpdate(ctx, db.LockItemForUpdateParams{
 			ItemID: input.ItemID,
 			OrgID:  input.OrgID,
 		})
@@ -76,6 +99,36 @@ func (s *StockMovementService) ExecuteMove(ctx context.Context, input ExecuteMov
 				return ErrItemNotFound
 			}
 			return err
+		}
+
+		item, err := q.GetItemByID(ctx, db.GetItemByIDParams{
+			ItemID: input.ItemID,
+			OrgID:  input.OrgID,
+		})
+		if err != nil {
+			return err
+		}
+
+		// Step 2: Multi-Unit UOM Conversion
+		effectiveQuantity := input.Quantity
+		if input.Unit != "" && input.Unit != item.BaseUom {
+			var mult float64
+			err := tx.QueryRow(ctx, `
+				SELECT multiplier::float8 FROM uom_conversions
+				WHERE org_id = $1 AND (item_id = $2 OR item_id IS NULL) AND from_unit = $3 AND to_base_unit = $4
+				ORDER BY item_id NULLS LAST
+				LIMIT 1
+			`, input.OrgID, input.ItemID, input.Unit, item.BaseUom).Scan(&mult)
+			if err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					return fmt.Errorf("%w: cannot convert '%s' to '%s'", ErrNoUOMConversion, input.Unit, item.BaseUom)
+				}
+				return err
+			}
+			if mult <= 0 {
+				return fmt.Errorf("%w: multiplier for '%s' to '%s' must be positive", ErrNoUOMConversion, input.Unit, item.BaseUom)
+			}
+			effectiveQuantity = input.Quantity * mult
 		}
 
 		// Validation: Serialized item check
@@ -88,7 +141,7 @@ func (s *StockMovementService) ExecuteMove(ctx context.Context, input ExecuteMov
 				}
 				lineSum += line.Quantity
 			}
-			if math.Abs(lineSum-input.Quantity) > 0.0001 {
+			if math.Abs(lineSum-effectiveQuantity) > 0.0001 {
 				return ErrInvalidLineQty
 			}
 		}
@@ -106,7 +159,7 @@ func (s *StockMovementService) ExecuteMove(ctx context.Context, input ExecuteMov
 		}
 
 		// Verify Destination Location
-		_, err = q.GetLocationByID(ctx, db.GetLocationByIDParams{
+		toLoc, err := q.GetLocationByID(ctx, db.GetLocationByIDParams{
 			LocationID: input.ToLocationID,
 			OrgID:      input.OrgID,
 		})
@@ -117,37 +170,53 @@ func (s *StockMovementService) ExecuteMove(ctx context.Context, input ExecuteMov
 			return err
 		}
 
-		// Step 2: Physical Balance Guard
+		// Step 3: Physical Balance Guard & Negative Stock Check
 		categoryStr := fmt.Sprintf("%v", fromLoc.Category)
 		isPhysicalSource := categoryStr == "physical_warehouse" || categoryStr == "physical_office"
 
 		if isPhysicalSource {
-			balNumeric, err := q.CalculateLocationBalance(ctx, db.CalculateLocationBalanceParams{
-				OrgID:        input.OrgID,
-				ItemID:       input.ItemID,
-				ToLocationID: input.FromLocationID,
-			})
-			if err != nil {
-				return err
-			}
+			// Check tenant settings for allow_negative_stock
+			allowNegative := false
+			_ = tx.QueryRow(ctx, "SELECT allow_negative_stock FROM organization_settings WHERE org_id = $1", input.OrgID).Scan(&allowNegative)
 
-			val, err := balNumeric.Float64Value()
-			currentBalance := 0.0
-			if err == nil && val.Valid {
-				currentBalance = val.Float64
-			}
+			if !allowNegative {
+				balNumeric, err := q.CalculateLocationBalance(ctx, db.CalculateLocationBalanceParams{
+					OrgID:        input.OrgID,
+					ItemID:       input.ItemID,
+					ToLocationID: input.FromLocationID,
+				})
+				if err != nil {
+					return err
+				}
 
-			// If on-hand balance is less than required, abort immediately
-			if currentBalance < input.Quantity {
-				return ErrInsufficientStock
+				val, err := balNumeric.Float64Value()
+				currentBalance := 0.0
+				if err == nil && val.Valid {
+					currentBalance = val.Float64
+				}
+
+				// Check reservations at this location
+				var reservedAtLoc float64
+				_ = tx.QueryRow(ctx, `
+					SELECT COALESCE(reserved, 0)::float8 FROM stock_balances
+					WHERE org_id = $1 AND item_id = $2 AND location_id = $3
+				`, input.OrgID, input.ItemID, input.FromLocationID).Scan(&reservedAtLoc)
+
+				availableBalance := currentBalance - reservedAtLoc
+
+				// If on-hand / available balance is less than required, abort immediately
+				if availableBalance < effectiveQuantity {
+					return ErrInsufficientStock
+				}
 			}
 		}
 
-		// Step 3: Insert into append-only stock_moves
+		// Step 4: Insert into append-only stock_moves
 		moveQty := pgtype.Numeric{}
-		_ = moveQty.Scan(fmt.Sprintf("%.4f", input.Quantity))
+		_ = moveQty.Scan(fmt.Sprintf("%.4f", effectiveQuantity))
 
 		refCode := pgtype.Text{String: input.ReferenceCode, Valid: input.ReferenceCode != ""}
+		idempKey := pgtype.Text{String: input.IdempotencyKey, Valid: input.IdempotencyKey != ""}
 		move, err := q.CreateStockMove(ctx, db.CreateStockMoveParams{
 			OrgID:          input.OrgID,
 			ItemID:         input.ItemID,
@@ -156,6 +225,7 @@ func (s *StockMovementService) ExecuteMove(ctx context.Context, input ExecuteMov
 			Quantity:       moveQty,
 			MoveType:       input.MoveType,
 			ReferenceCode:  refCode,
+			IdempotencyKey: idempKey,
 			ActorID:        input.ActorID,
 		})
 		if err != nil {
@@ -163,7 +233,72 @@ func (s *StockMovementService) ExecuteMove(ctx context.Context, input ExecuteMov
 		}
 		result.Move = move
 
-		// Step 4: Line Allocation for tracking numbers
+		// Step 5: Update Materialized Stock Balances
+		toCategoryStr := fmt.Sprintf("%v", toLoc.Category)
+		isPhysicalDest := toCategoryStr == "physical_warehouse" || toCategoryStr == "physical_office"
+
+		if isPhysicalSource {
+			cmd, err := tx.Exec(ctx, `
+				UPDATE stock_balances
+				SET on_hand = on_hand - $4,
+				    updated_at = CURRENT_TIMESTAMP
+				WHERE org_id = $1 AND item_id = $2 AND location_id = $3
+			`, input.OrgID, input.ItemID, input.FromLocationID, effectiveQuantity)
+			if err != nil {
+				return err
+			}
+			if cmd.RowsAffected() == 0 {
+				_, err = tx.Exec(ctx, `
+					INSERT INTO stock_balances (org_id, item_id, location_id, on_hand, reserved, checked_out, updated_at)
+					VALUES ($1, $2, $3, 0, 0, 0, CURRENT_TIMESTAMP)
+					ON CONFLICT (org_id, item_id, location_id) DO NOTHING
+				`, input.OrgID, input.ItemID, input.FromLocationID)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		if isPhysicalDest {
+			cmd, err := tx.Exec(ctx, `
+				UPDATE stock_balances
+				SET on_hand = on_hand + $4,
+				    updated_at = CURRENT_TIMESTAMP
+				WHERE org_id = $1 AND item_id = $2 AND location_id = $3
+			`, input.OrgID, input.ItemID, input.ToLocationID, effectiveQuantity)
+			if err != nil {
+				return err
+			}
+			if cmd.RowsAffected() == 0 {
+				_, err = tx.Exec(ctx, `
+					INSERT INTO stock_balances (org_id, item_id, location_id, on_hand, reserved, checked_out, updated_at)
+					VALUES ($1, $2, $3, $4, 0, 0, CURRENT_TIMESTAMP)
+					ON CONFLICT (org_id, item_id, location_id)
+					DO UPDATE SET
+						on_hand = stock_balances.on_hand + $4,
+						updated_at = CURRENT_TIMESTAMP
+				`, input.OrgID, input.ItemID, input.ToLocationID, effectiveQuantity)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		if toCategoryStr == "virtual_custody" {
+			_, err = tx.Exec(ctx, `
+				INSERT INTO stock_balances (org_id, item_id, location_id, on_hand, reserved, checked_out, updated_at)
+				VALUES ($1, $2, $3, 0, 0, $4, CURRENT_TIMESTAMP)
+				ON CONFLICT (org_id, item_id, location_id)
+				DO UPDATE SET
+					checked_out = stock_balances.checked_out + $4,
+					updated_at = CURRENT_TIMESTAMP
+			`, input.OrgID, input.ItemID, input.FromLocationID, effectiveQuantity)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Step 6: Line Allocation for tracking numbers
 		for _, line := range input.Lines {
 			lineQty := pgtype.Numeric{}
 			_ = lineQty.Scan(fmt.Sprintf("%.4f", line.Quantity))

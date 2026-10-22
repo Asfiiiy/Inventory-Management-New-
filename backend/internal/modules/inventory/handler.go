@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -16,12 +17,13 @@ import (
 
 // Handler manages HTTP endpoints for inventory stock movements and balance queries.
 type Handler struct {
-	service *StockMovementService
+	service      *StockMovementService
+	reservations *ReservationsService
 }
 
 // NewHandler constructs a new Inventory Handler.
-func NewHandler(svc *StockMovementService) *Handler {
-	return &Handler{service: svc}
+func NewHandler(svc *StockMovementService, res *ReservationsService) *Handler {
+	return &Handler{service: svc, reservations: res}
 }
 
 type CreateMoveRequest struct {
@@ -29,8 +31,10 @@ type CreateMoveRequest struct {
 	FromLocationID string          `json:"from_location_id"`
 	ToLocationID   string          `json:"to_location_id"`
 	Quantity       float64         `json:"quantity"`
+	Unit           string          `json:"unit,omitempty"`
 	MoveType       string          `json:"move_type"`
 	ReferenceCode  string          `json:"reference_code,omitempty"`
+	IdempotencyKey string          `json:"idempotency_key,omitempty"`
 	Lines          []MoveLineInput `json:"lines,omitempty"`
 }
 
@@ -101,8 +105,10 @@ func (h *Handler) CreateMove(w http.ResponseWriter, r *http.Request) {
 		FromLocationID: fromLocID,
 		ToLocationID:   toLocID,
 		Quantity:       req.Quantity,
+		Unit:           req.Unit,
 		MoveType:       req.MoveType,
 		ReferenceCode:  req.ReferenceCode,
+		IdempotencyKey: req.IdempotencyKey,
 		Lines:          req.Lines,
 	}
 
@@ -117,6 +123,10 @@ func (h *Handler) CreateMove(w http.ResponseWriter, r *http.Request) {
 					{Field: "quantity", Message: "requested quantity exceeds on-hand balance at source location"},
 				},
 			)
+			return
+		}
+		if errors.Is(err, ErrNoUOMConversion) {
+			platformHttp.RespondProblem(w, r, http.StatusUnprocessableEntity, "UOM Conversion Error", err.Error(), nil)
 			return
 		}
 		if errors.Is(err, ErrInvalidLineQty) {
@@ -227,3 +237,206 @@ func (h *Handler) ListMoves(w http.ResponseWriter, r *http.Request) {
 		"offset": offset,
 	})
 }
+
+// -----------------------------------------------------------------------------
+// Stock Summary Handlers
+// -----------------------------------------------------------------------------
+
+// GetItemStockSummary returns on-hand, reserved, available, 4-tier status badges, and location breakdown.
+func (h *Handler) GetItemStockSummary(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := middleware.GetTenantID(r.Context())
+	if !ok {
+		platformHttp.RespondProblem(w, r, http.StatusUnauthorized, "Unauthorized", "Tenant context missing", nil)
+		return
+	}
+
+	idStr := chi.URLParam(r, "id")
+	itemID, err := uuid.Parse(idStr)
+	if err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusBadRequest, "Invalid ID", "Invalid item UUID parameter", nil)
+		return
+	}
+
+	summary, err := h.service.GetItemStockSummary(r.Context(), orgID, itemID)
+	if err != nil {
+		if errors.Is(err, ErrItemNotFound) {
+			platformHttp.RespondProblem(w, r, http.StatusNotFound, "Not Found", "Item not found", nil)
+			return
+		}
+		platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "Internal Server Error", err.Error(), nil)
+		return
+	}
+
+	platformHttp.RespondJSON(w, http.StatusOK, summary, nil)
+}
+
+// -----------------------------------------------------------------------------
+// Reservations Handlers
+// -----------------------------------------------------------------------------
+
+type CreateReservationRequest struct {
+	ItemID      string  `json:"item_id"`
+	LocationID  string  `json:"location_id"`
+	Quantity    float64 `json:"quantity"`
+	Kind        string  `json:"kind,omitempty"`
+	Target      string  `json:"target,omitempty"`
+	DueBackDate *string `json:"due_back_date,omitempty"`
+}
+
+func (h *Handler) CreateReservation(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := middleware.GetTenantID(r.Context())
+	if !ok {
+		platformHttp.RespondProblem(w, r, http.StatusUnauthorized, "Unauthorized", "Tenant context missing", nil)
+		return
+	}
+
+	var req CreateReservationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusBadRequest, "Bad Request", "Malformed JSON body", nil)
+		return
+	}
+
+	itemID, err := uuid.Parse(req.ItemID)
+	if err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusBadRequest, "Validation Error", "Invalid item_id UUID", nil)
+		return
+	}
+
+	locID, err := uuid.Parse(req.LocationID)
+	if err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusBadRequest, "Validation Error", "Invalid location_id UUID", nil)
+		return
+	}
+
+	var dueBack *time.Time
+	if req.DueBackDate != nil && *req.DueBackDate != "" {
+		t, err := time.Parse(time.RFC3339, *req.DueBackDate)
+		if err == nil {
+			dueBack = &t
+		}
+	}
+
+	res, err := h.reservations.CreateReservation(r.Context(), CreateReservationInput{
+		OrgID:       orgID,
+		ItemID:      itemID,
+		LocationID:  locID,
+		Quantity:    req.Quantity,
+		Kind:        req.Kind,
+		Target:      req.Target,
+		DueBackDate: dueBack,
+	})
+	if err != nil {
+		if errors.Is(err, ErrInsufficientStock) {
+			platformHttp.RespondProblem(w, r, http.StatusUnprocessableEntity, "Insufficient Stock", err.Error(), nil)
+			return
+		}
+		platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "Internal Server Error", err.Error(), nil)
+		return
+	}
+
+	platformHttp.RespondJSON(w, http.StatusCreated, res, nil)
+}
+
+func (h *Handler) ListReservations(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := middleware.GetTenantID(r.Context())
+	if !ok {
+		platformHttp.RespondProblem(w, r, http.StatusUnauthorized, "Unauthorized", "Tenant context missing", nil)
+		return
+	}
+
+	var itemUUID *uuid.UUID
+	if itemStr := r.URL.Query().Get("item_id"); itemStr != "" {
+		if parsed, err := uuid.Parse(itemStr); err == nil {
+			itemUUID = &parsed
+		}
+	}
+	status := r.URL.Query().Get("status")
+
+	reservations, err := h.reservations.ListReservations(r.Context(), orgID, itemUUID, status)
+	if err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "Internal Server Error", err.Error(), nil)
+		return
+	}
+
+	platformHttp.RespondJSON(w, http.StatusOK, reservations, map[string]any{"count": len(reservations)})
+}
+
+func (h *Handler) ReleaseReservation(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := middleware.GetTenantID(r.Context())
+	if !ok {
+		platformHttp.RespondProblem(w, r, http.StatusUnauthorized, "Unauthorized", "Tenant context missing", nil)
+		return
+	}
+
+	idStr := chi.URLParam(r, "id")
+	resID, err := uuid.Parse(idStr)
+	if err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusBadRequest, "Invalid ID", "Invalid reservation UUID", nil)
+		return
+	}
+
+	released, err := h.reservations.ReleaseReservation(r.Context(), orgID, resID)
+	if err != nil {
+		if errors.Is(err, ErrReservationNotFound) {
+			platformHttp.RespondProblem(w, r, http.StatusNotFound, "Not Found", "Reservation not found", nil)
+			return
+		}
+		if errors.Is(err, ErrReservationInactive) {
+			platformHttp.RespondProblem(w, r, http.StatusConflict, "Conflict", "Reservation is not active", nil)
+			return
+		}
+		platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "Internal Server Error", err.Error(), nil)
+		return
+	}
+
+	platformHttp.RespondJSON(w, http.StatusOK, released, nil)
+}
+
+type FulfillReservationRequest struct {
+	ToLocationID string `json:"to_location_id"`
+}
+
+func (h *Handler) FulfillReservation(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := middleware.GetTenantID(r.Context())
+	if !ok {
+		platformHttp.RespondProblem(w, r, http.StatusUnauthorized, "Unauthorized", "Tenant context missing", nil)
+		return
+	}
+
+	idStr := chi.URLParam(r, "id")
+	resID, err := uuid.Parse(idStr)
+	if err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusBadRequest, "Invalid ID", "Invalid reservation UUID", nil)
+		return
+	}
+
+	var req FulfillReservationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusBadRequest, "Bad Request", "Malformed JSON body", nil)
+		return
+	}
+
+	toLocID, err := uuid.Parse(req.ToLocationID)
+	if err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusBadRequest, "Invalid Location ID", "to_location_id must be a valid UUID", nil)
+		return
+	}
+
+	actorID := uuid.New()
+	fulfilled, err := h.reservations.FulfillReservation(r.Context(), orgID, resID, toLocID, actorID)
+	if err != nil {
+		if errors.Is(err, ErrReservationNotFound) {
+			platformHttp.RespondProblem(w, r, http.StatusNotFound, "Not Found", "Reservation not found", nil)
+			return
+		}
+		if errors.Is(err, ErrReservationInactive) {
+			platformHttp.RespondProblem(w, r, http.StatusConflict, "Conflict", "Reservation is not active", nil)
+			return
+		}
+		platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "Internal Server Error", err.Error(), nil)
+		return
+	}
+
+	platformHttp.RespondJSON(w, http.StatusOK, fulfilled, nil)
+}
+
