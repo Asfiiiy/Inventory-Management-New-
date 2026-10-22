@@ -79,6 +79,41 @@ function AdminPortalContent() {
   const [managerEmail, setManagerEmail] = useState("");
   const [managerPassword, setManagerPassword] = useState("Password123!");
 
+  // Selected Client for Details & Management Modal
+  const [selectedClient, setSelectedClient] = useState<OrganizationSummary | null>(null);
+  const [editPlan, setEditPlan] = useState<string>("enterprise");
+  const [isSavingPlan, setIsSavingPlan] = useState<boolean>(false);
+
+  const handleUpdatePlan = async () => {
+    if (!selectedClient) return;
+    setIsSavingPlan(true);
+    try {
+      const res = await apiClient.superadmin.updateOrganization(selectedClient.org_id, { plan: editPlan });
+      if (res.success) {
+        toast({
+          title: "Plan Updated",
+          description: `Successfully updated ${selectedClient.name} to ${editPlan.toUpperCase()}.`,
+          variant: "success",
+        });
+        setSelectedClient({ ...selectedClient, plan: editPlan });
+        await fetchAdminData();
+      }
+    } catch (err: any) {
+      toast({
+        title: "Update Failed",
+        description: err?.message || "Could not update plan",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingPlan(false);
+    }
+  };
+
+  const handlePreviewStore = (client: OrganizationSummary) => {
+    setTenantId(client.org_id);
+    window.open("/", "_blank");
+  };
+
   const fetchAdminData = async () => {
     setIsLoading(true);
     try {
@@ -331,15 +366,17 @@ function AdminPortalContent() {
 
         {/* Bottom Profile & Switch to Software */}
         <div className="p-3 border-t border-slate-800/80 space-y-2">
-          {/* Switch to Software Dashboard */}
-          <Link
+          {/* Switch to Software Dashboard (Opens in New Tab) */}
+          <a
             href="/"
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 text-indigo-300 text-xs font-semibold transition-all"
-            title="Open the client inventory store software"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 text-indigo-300 text-xs font-semibold transition-all cursor-pointer"
+            title="Open the client store software in a separate new tab"
           >
-            <Store className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Launch Software Dashboard</span>
-          </Link>
+            <ExternalLink className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Preview Store (New Tab)</span>
+          </a>
 
           {/* Admin User Card & Sign Out */}
           <div className="flex items-center justify-between p-2 rounded-xl bg-slate-900/80 border border-slate-800">
@@ -401,13 +438,16 @@ function AdminPortalContent() {
               <span className="hidden sm:inline">Refresh</span>
             </button>
 
-            <Link
+            <a
               href="/"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/15 hover:bg-indigo-600/25 text-indigo-300 border border-indigo-500/30 text-xs font-semibold transition-all"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/15 hover:bg-indigo-600/25 text-indigo-300 border border-indigo-500/30 text-xs font-semibold transition-all cursor-pointer"
+              title="Open the client store software in a separate new tab"
             >
-              <Store className="w-3.5 h-3.5" />
-              <span>Open Software</span>
-            </Link>
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Preview Store (New Tab)</span>
+            </a>
           </div>
         </header>
 
@@ -538,7 +578,7 @@ function AdminPortalContent() {
                       </span>
                     </h3>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      Jisko bhi humne software dia hai wo yahan listed hai. Click &ldquo;Open Software&rdquo; to launch their workspace.
+                      Jisko bhi humne software dia hai wo yahan listed hai. &ldquo;Manage Client&rdquo; par click karke unka license plan aur details control karein.
                     </p>
                   </div>
 
@@ -638,19 +678,27 @@ function AdminPortalContent() {
                               </td>
 
                               <td className="py-4 px-6 text-right">
-                                <button
-                                  onClick={() => handleOpenClientSoftware(c)}
-                                  className={cn(
-                                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer",
-                                    isCurrent
-                                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30"
-                                      : "bg-slate-800 text-slate-200 hover:bg-indigo-600 hover:text-white"
-                                  )}
-                                  title="Open this client's inventory store software"
-                                >
-                                  <Store className="w-3.5 h-3.5" />
-                                  <span>{isCurrent ? "Active Software" : "Open Software"}</span>
-                                </button>
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    onClick={() => {
+                                      setSelectedClient(c);
+                                      setEditPlan(c.plan.toLowerCase());
+                                    }}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-all cursor-pointer border border-slate-700/60"
+                                    title="Manage this client's license & details"
+                                  >
+                                    <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+                                    <span>Manage Client</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handlePreviewStore(c)}
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600/15 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 transition-all cursor-pointer"
+                                    title="Preview this client's store in a new browser tab"
+                                  >
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    <span className="hidden xl:inline">Preview</span>
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           );
@@ -1059,6 +1107,108 @@ function AdminPortalContent() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* ======================================================== */}
+      {/* 4. MODAL: MANAGE CLIENT & LICENSE DETAILS                */}
+      {/* ======================================================== */}
+      {selectedClient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-xl rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl p-6 md:p-8 space-y-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                  Client Profile &amp; Control
+                </span>
+                <h3 className="text-xl font-bold text-white mt-1.5 flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-indigo-400" />
+                  <span>{selectedClient.name}</span>
+                </h3>
+                <p className="text-xs text-slate-400 font-mono mt-0.5">
+                  Tenant ID: {selectedClient.org_id} &bull; Slug: {selectedClient.slug}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedClient(null)}
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Metrics cards */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800">
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">Staff Accounts</span>
+                <p className="text-lg font-bold text-white mt-1 font-mono">{selectedClient.user_count}</p>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800">
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">Store SKUs</span>
+                <p className="text-lg font-bold text-emerald-400 mt-1 font-mono">{selectedClient.item_count}</p>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800">
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">Ledger Moves</span>
+                <p className="text-lg font-bold text-purple-400 mt-1 font-mono">{selectedClient.movement_count}</p>
+              </div>
+            </div>
+
+            {/* License tier upgrade/downgrade */}
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800/80 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-white flex items-center gap-2">
+                  <Key className="w-4 h-4 text-amber-400" />
+                  <span>Assigned License Tier</span>
+                </label>
+                <span className="text-[11px] text-slate-400">
+                  Current: <strong className="uppercase text-amber-300">{selectedClient.plan}</strong>
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <select
+                  value={editPlan}
+                  onChange={(e) => setEditPlan(e.target.value)}
+                  className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                >
+                  <option value="enterprise">ENTERPRISE (Full access, unlimited staff)</option>
+                  <option value="standard">STANDARD (Standard store access)</option>
+                  <option value="trial">30-DAY TRIAL (Evaluation mode)</option>
+                </select>
+                <button
+                  onClick={handleUpdatePlan}
+                  disabled={isSavingPlan || editPlan === selectedClient.plan.toLowerCase()}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/30 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {isSavingPlan ? "Saving..." : "Save Plan"}
+                </button>
+              </div>
+            </div>
+
+            {/* Launch store preview option */}
+            <div className="p-4 rounded-2xl bg-indigo-950/20 border border-indigo-500/20 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-indigo-200">Preview Store in New Tab</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Admin panel khula rahega aur client ka store alag new tab mein khulega.
+                </p>
+              </div>
+              <button
+                onClick={() => handlePreviewStore(selectedClient)}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition-all cursor-pointer"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Preview ↗</span>
+              </button>
+            </div>
+
+            <div className="flex items-center justify-end pt-2 border-t border-slate-800">
+              <button
+                onClick={() => setSelectedClient(null)}
+                className="px-4 py-2 rounded-xl border border-slate-800 hover:bg-slate-800 text-slate-300 text-xs font-semibold cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
