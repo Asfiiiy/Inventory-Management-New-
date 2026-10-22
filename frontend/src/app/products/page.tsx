@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   Package,
@@ -21,6 +22,7 @@ import {
   Barcode,
   Download,
   Lock,
+  Eye,
 } from "lucide-react";
 import { useInventory, Product } from "@/lib/inventory-store";
 import { useAuth } from "@/lib/auth-context";
@@ -338,11 +340,21 @@ function ProductsMasterContent() {
 
                   return (
                     <tr key={p.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-900/50">
-                      <td className="px-5 py-3 font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                        {p.sku}
+                      <td className="px-5 py-3 font-mono font-bold">
+                        <Link
+                          href={`/products/${p.id}`}
+                          className="text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1"
+                        >
+                          <span>{p.sku}</span>
+                        </Link>
                       </td>
                       <td className="px-5 py-3 font-medium text-slate-900 dark:text-white">
-                        {p.name}
+                        <Link
+                          href={`/products/${p.id}`}
+                          className="hover:text-indigo-500 hover:underline"
+                        >
+                          {p.name}
+                        </Link>
                       </td>
                       <td className="px-5 py-3 text-slate-500">
                         <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-900 text-[11px]">
@@ -380,6 +392,13 @@ function ProductsMasterContent() {
                       </td>
                       <td className="px-5 py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          <Link
+                            href={`/products/${p.id}`}
+                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
+                            title="View Product 360° Dossier"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </Link>
                           <button
                             onClick={() => setPrintingProduct(p)}
                             className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"

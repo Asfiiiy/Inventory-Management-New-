@@ -217,5 +217,65 @@ export const apiClient = {
       request<{ success: boolean; data: { location_id: string; item_id: string; balance: number } }>(
         `/api/v1/stock/locations/${locationId}/balance?item_id=${itemId}`
       ),
+    getItemSummary: (itemId: string) =>
+      request<{
+        success: boolean;
+        data: {
+          item_id: string;
+          sku: string;
+          name: string;
+          base_uom: string;
+          total_on_hand: number;
+          total_reserved: number;
+          total_available: number;
+          total_checked_out: number;
+          reorder_level: number;
+          buffer_stock: number;
+          stock_status: "IN_STOCK" | "LOW_STOCK" | "BUFFER_ALERT" | "OUT_OF_STOCK";
+          locations: Array<{
+            location_id: string;
+            location_name: string;
+            is_backup_location: boolean;
+            on_hand: number;
+            reserved: number;
+            available: number;
+          }>;
+        };
+      }>(`/api/v1/stock/items/${itemId}/summary`),
+    getAlerts: () =>
+      request<{
+        success: boolean;
+        data: Array<{
+          item_id: string;
+          sku: string;
+          name: string;
+          base_uom: string;
+          total_on_hand: number;
+          reorder_level: number;
+          buffer_stock: number;
+          alert_type: "OUT_OF_STOCK" | "BUFFER_ALERT" | "LOW_STOCK";
+          suggested_reorder: number;
+        }>;
+      }>("/api/v1/stock/alerts"),
+    reconcileItem: (itemId: string) =>
+      request<{
+        success: boolean;
+        data: {
+          org_id: string;
+          item_id: string;
+          discrepancies: number;
+          locations: Array<{
+            location_id: string;
+            location_name: string;
+            ledger_sum: number;
+            cached_on_hand: number;
+            drift: number;
+            healed: boolean;
+          }>;
+        };
+      }>(`/api/v1/stock/items/${itemId}/reconcile`, {
+        method: "POST",
+      }),
   },
 };
+
