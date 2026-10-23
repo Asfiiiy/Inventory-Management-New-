@@ -116,12 +116,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setTenantId(receivedUser.org_id);
         }
 
-        if (targetRedirect) {
-          router.push(targetRedirect);
-        } else if (isMaster) {
-          router.push("/admin");
+        const destination = targetRedirect || (isMaster ? "/admin" : "/");
+        if (typeof window !== "undefined") {
+          window.location.href = destination;
         } else {
-          router.push("/");
+          router.push(destination);
         }
       } finally {
         setIsLoading(false);
@@ -146,7 +145,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setTenantId(receivedUser.org_id);
         }
 
-        router.push("/");
+        if (typeof window !== "undefined") {
+          window.location.href = "/";
+        } else {
+          router.push("/");
+        }
       } finally {
         setIsLoading(false);
       }
@@ -158,7 +161,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearAuthToken();
     setUser(null);
     setTokenState(null);
-    router.push("/login");
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    } else {
+      router.push("/login");
+    }
   }, [router]);
 
   const isSuperAdmin = user?.email === "admin@whoopit.io" || user?.role === "superadmin";

@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { apiClient, ApiError } from "./api";
+import { useAuth } from "./auth-context";
 
 export interface Product {
   id: string;
@@ -100,12 +101,12 @@ interface InventoryContextType {
   resetToDefaults: () => Promise<void>;
 }
 
-// Fallback known location IDs for default tenant
+// Default empty locations; will be resolved dynamically per tenant from PostgreSQL
 const DEFAULT_LOCATIONS: StandardLocations = {
-  warehouseId: "574ee1f1-aa2c-4697-95d8-f313973a18ee",
-  vendorId: "24597885-2c75-40ab-8212-f8fd693b9cdd",
-  customerId: "e50c1844-01ae-4227-bd8d-89bc94c67383",
-  scrapId: "b842cb0d-3ab7-4232-86b1-4f6d8a897278",
+  warehouseId: "",
+  vendorId: "",
+  customerId: "",
+  scrapId: "",
 };
 
 const defaultContacts: Contact[] = [
@@ -150,7 +151,7 @@ const defaultContacts: Contact[] = [
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
 
 function getTenantOrgId(): string {
-  if (typeof window === "undefined") return "default";
+  if (typeof window !== "undefined") return "default";
   try {
     const userStr = localStorage.getItem("whoopit_auth_user");
     return userStr ? JSON.parse(userStr)?.org_id || "default" : "default";
@@ -160,12 +161,15 @@ function getTenantOrgId(): string {
 }
 
 export function InventoryProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const activeOrgId = user?.org_id || getTenantOrgId();
+
   const [products, setProducts] = useState<Product[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [contacts, setContacts] = useState<Contact[]>(() => {
     if (typeof window === "undefined") return [];
     try {
-      const orgId = getTenantOrgId();
+      const orgId = activeOrgId;
       const saved = localStorage.getItem(`whoopit_contacts_${orgId}`);
       if (saved) return JSON.parse(saved);
       // Only demo tenant gets initial sample contacts
@@ -321,8 +325,11 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // Whenever active tenant changes, wipe in-memory products and movements immediately
+    setProducts([]);
+    setMovements([]);
     fetchBackendData();
-  }, [fetchBackendData]);
+  }, [activeOrgId, fetchBackendData]);
 
   // Metrics
   const totalProductsCount = products.length;
@@ -537,6 +544,12 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
 
   const resetToDefaults = async () => {
+    // Only allow demo sample seeding for the initial demonstration tenant
+    if (activeOrgId !== "a0000000-0000-0000-0000-000000000001") {
+      console.warn("Seeding demo products is strictly blocked for private client organizations.");
+      return;
+    }
+
     // Re-seed standard products into Go backend
     const seedItems = [
       {

@@ -24,6 +24,8 @@ var (
 type UserProfile struct {
 	ID        uuid.UUID `json:"id"`
 	OrgID     uuid.UUID `json:"org_id"`
+	OrgName   string    `json:"org_name,omitempty"`
+	OrgPlan   string    `json:"org_plan,omitempty"`
 	Email     string    `json:"email"`
 	Name      string    `json:"name"`
 	Role      string    `json:"role"`
@@ -127,6 +129,8 @@ func (s *Service) Register(ctx context.Context, email, password, name, orgName s
 		User: UserProfile{
 			ID:        userID,
 			OrgID:     orgID,
+			OrgName:   orgName,
+			OrgPlan:   "enterprise",
 			Email:     email,
 			Name:      name,
 			Role:      "owner",
@@ -148,6 +152,8 @@ func (s *Service) Login(ctx context.Context, email, password string) (*AuthRespo
 	var (
 		userID       uuid.UUID
 		orgID        uuid.UUID
+		orgName      string
+		orgPlan      string
 		emailDB      string
 		passwordHash string
 		role         string
@@ -157,15 +163,16 @@ func (s *Service) Login(ctx context.Context, email, password string) (*AuthRespo
 	)
 
 	query := `
-		SELECT user_id, org_id, email::text, password_hash, role, name, is_active, created_at
-		FROM users
-		WHERE email = $1
-		ORDER BY is_active DESC, created_at DESC
+		SELECT u.user_id, u.org_id, COALESCE(o.name, ''), COALESCE(o.plan, 'standard'), u.email::text, u.password_hash, u.role, u.name, u.is_active, u.created_at
+		FROM users u
+		LEFT JOIN organizations o ON o.org_id = u.org_id
+		WHERE u.email = $1
+		ORDER BY u.is_active DESC, u.created_at DESC
 		LIMIT 1
 	`
 
 	err := pool.QueryRow(ctx, query, email).Scan(
-		&userID, &orgID, &emailDB, &passwordHash, &role, &name, &isActive, &createdAt,
+		&userID, &orgID, &orgName, &orgPlan, &emailDB, &passwordHash, &role, &name, &isActive, &createdAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -207,6 +214,8 @@ func (s *Service) Login(ctx context.Context, email, password string) (*AuthRespo
 		User: UserProfile{
 			ID:        userID,
 			OrgID:     orgID,
+			OrgName:   orgName,
+			OrgPlan:   orgPlan,
 			Email:     emailDB,
 			Name:      name,
 			Role:      role,
@@ -223,6 +232,8 @@ func (s *Service) GetUserProfile(ctx context.Context, userID uuid.UUID) (*UserPr
 	var (
 		uID       uuid.UUID
 		orgID     uuid.UUID
+		orgName   string
+		orgPlan   string
 		email     string
 		role      string
 		name      string
@@ -231,13 +242,14 @@ func (s *Service) GetUserProfile(ctx context.Context, userID uuid.UUID) (*UserPr
 	)
 
 	query := `
-		SELECT user_id, org_id, email::text, role, name, is_active, created_at
-		FROM users
-		WHERE user_id = $1
+		SELECT u.user_id, u.org_id, COALESCE(o.name, ''), COALESCE(o.plan, 'standard'), u.email::text, u.role, u.name, u.is_active, u.created_at
+		FROM users u
+		LEFT JOIN organizations o ON o.org_id = u.org_id
+		WHERE u.user_id = $1
 	`
 
 	err := pool.QueryRow(ctx, query, userID).Scan(
-		&uID, &orgID, &email, &role, &name, &isActive, &createdAt,
+		&uID, &orgID, &orgName, &orgPlan, &email, &role, &name, &isActive, &createdAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -254,6 +266,8 @@ func (s *Service) GetUserProfile(ctx context.Context, userID uuid.UUID) (*UserPr
 	return &UserProfile{
 		ID:        uID,
 		OrgID:     orgID,
+		OrgName:   orgName,
+		OrgPlan:   orgPlan,
 		Email:     email,
 		Name:      name,
 		Role:      role,

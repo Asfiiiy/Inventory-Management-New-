@@ -85,11 +85,14 @@ export default function DashboardPage() {
     try {
       // 1. Stock alerts
       const alertsRes = await apiClient.stock.getAlerts();
-      if (alertsRes.success && alertsRes.data) {
+      if (alertsRes.success && Array.isArray(alertsRes.data)) {
         setBackendAlerts(alertsRes.data);
+      } else {
+        setBackendAlerts([]);
       }
     } catch (err) {
       console.warn("Backend stock alerts error:", err);
+      setBackendAlerts([]);
     }
 
     try {
@@ -97,9 +100,12 @@ export default function DashboardPage() {
       const custodyRes = await apiClient.custody.getSummary();
       if (custodyRes.success && custodyRes.data) {
         setCustodySummary(custodyRes.data);
+      } else {
+        setCustodySummary(null);
       }
     } catch (err) {
       console.warn("Custody summary error:", err);
+      setCustodySummary(null);
     } finally {
       setIsLoadingAlerts(false);
     }
@@ -111,27 +117,6 @@ export default function DashboardPage() {
 
   const handleRefresh = async () => {
     await Promise.all([refetch(), fetchDashboardFeeds()]);
-  };
-
-  const handleSeed = async () => {
-    setIsSeeding(true);
-    try {
-      await resetToDefaults();
-      toast({
-        title: "Catalog Seeded",
-        description: "Successfully seeded initial items and warehouse balances into PostgreSQL.",
-        variant: "success",
-      });
-      await fetchDashboardFeeds();
-    } catch (e: any) {
-      toast({
-        title: "Seeding Failed",
-        description: e?.message || "Could not seed catalog",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSeeding(false);
-    }
   };
 
   const totalUnitsInStock = products.reduce((sum, p) => sum + p.currentStock, 0);
@@ -158,7 +143,12 @@ export default function DashboardPage() {
     };
   });
 
-  const activeAlertsCount = backendAlerts.length > 0 ? backendAlerts.length : lowStockItems.length;
+  const activeAlertsCount =
+    products.length === 0
+      ? 0
+      : backendAlerts.length > 0
+      ? backendAlerts.length
+      : lowStockItems.length;
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-12">
@@ -189,14 +179,13 @@ export default function DashboardPage() {
         {/* Quick Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
           {products.length === 0 && (
-            <button
-              onClick={handleSeed}
-              disabled={isSeeding || isStoreLoading}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            <Link
+              href="/products?action=new"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0c3843] hover:bg-[#082931] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
             >
-              {isSeeding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-              <span>Seed Catalog</span>
-            </button>
+              <Plus className="w-3.5 h-3.5" />
+              <span>+ Add Product</span>
+            </Link>
           )}
 
           <button
@@ -494,7 +483,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {backendAlerts.length === 0 && lowStockItems.length === 0 ? (
+            {products.length === 0 || (backendAlerts.length === 0 && lowStockItems.length === 0) ? (
               <div className="py-8 text-center text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
                 <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
                 <p className="text-xs font-medium">All products have healthy buffer and reorder levels.</p>

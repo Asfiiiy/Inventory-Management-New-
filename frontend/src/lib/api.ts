@@ -10,6 +10,8 @@ export interface ProblemDetails {
 export interface UserProfile {
   id: string;
   org_id: string;
+  org_name?: string;
+  org_plan?: string;
   email: string;
   name: string;
   role: "admin" | "staff" | string;
@@ -25,22 +27,44 @@ export interface AuthResponse {
 export const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 export const DEFAULT_TENANT_ID = "a0000000-0000-0000-0000-000000000001";
 
-let currentTenantId: string = DEFAULT_TENANT_ID;
+let currentTenantId: string = "";
 let currentAuthToken: string | null = null;
 
 export function setTenantId(tenantId: string) {
   currentTenantId = tenantId;
   if (typeof window !== "undefined") {
-    localStorage.setItem("whoopit_tenant_id", tenantId);
+    if (tenantId) {
+      localStorage.setItem("whoopit_tenant_id", tenantId);
+    } else {
+      localStorage.removeItem("whoopit_tenant_id");
+    }
   }
 }
 
 export function getTenantId(): string {
   if (typeof window !== "undefined") {
+    // 1. Strict Priority: Always derive tenant ID from the active authenticated user profile
+    try {
+      const userStr = localStorage.getItem("whoopit_auth_user");
+      if (userStr) {
+        const parsed = JSON.parse(userStr);
+        if (parsed?.org_id) {
+          currentTenantId = parsed.org_id;
+          return parsed.org_id;
+        }
+      }
+    } catch {
+      // Ignore JSON parse error
+    }
+
+    // 2. Fallback to explicitly saved tenant ID
     const saved = localStorage.getItem("whoopit_tenant_id");
-    if (saved) return saved;
+    if (saved) {
+      currentTenantId = saved;
+      return saved;
+    }
   }
-  return currentTenantId;
+  return currentTenantId || DEFAULT_TENANT_ID;
 }
 
 export function setAuthToken(token: string, role?: string) {
@@ -76,10 +100,12 @@ export function getAuthToken(): string | null {
 
 export function clearAuthToken() {
   currentAuthToken = null;
+  currentTenantId = "";
   if (typeof window !== "undefined") {
     localStorage.removeItem("whoopit_auth_token");
     localStorage.removeItem("whoopit_auth_user");
     localStorage.removeItem("whoopit_auth_role");
+    localStorage.removeItem("whoopit_tenant_id");
     document.cookie = "whoopit_auth_token=; path=/; max-age=0; SameSite=Lax";
     document.cookie = "whoopit_auth_role=; path=/; max-age=0; SameSite=Lax";
   }

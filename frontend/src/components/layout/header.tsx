@@ -97,11 +97,11 @@ export function Header() {
 
       {/* Right Controls: Quick Actions, Low Stock Bell, Theme, User */}
       <div className="flex items-center gap-2.5">
-        {isAdmin && (
+        {isSuperAdmin && (
           <Link
             href="/admin"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-xs font-bold transition-all shadow-xs"
-            title="Go to Admin Portal"
+            title="Go to Master Platform Control Center"
           >
             <Shield className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Admin Portal</span>
@@ -149,21 +149,6 @@ export function Header() {
             <Moon className="w-4 h-4 text-slate-600" />
           )}
         </button>
-
-        {/* Demo Data Reset (Admin only or general utility) */}
-        {isAdmin && (
-          <button
-            onClick={() => {
-              if (confirm("Reset inventory to clean standard sample products?")) {
-                resetToDefaults();
-              }
-            }}
-            className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100/60 dark:bg-slate-900/60 hover:bg-slate-200 dark:hover:bg-slate-800 flex items-center justify-center text-slate-500 transition-colors cursor-pointer"
-            title="Reset to default sample inventory"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
-        )}
 
         {/* User Profile & Sign Out Dropdown */}
         <div className="relative pl-2 border-l border-slate-200 dark:border-slate-800" ref={dropdownRef}>

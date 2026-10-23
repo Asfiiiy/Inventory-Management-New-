@@ -32,7 +32,7 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const { products, lowStockItems } = useInventory();
-  const { isAdmin, isStaff } = useAuth();
+  const { user, isAdmin, isStaff } = useAuth();
 
   const navItems = [
     {
@@ -107,14 +107,16 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </div>
           {!collapsed && (
             <div className="flex flex-col truncate">
-              <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5">
-                Whoopit IMS
-                <span className="text-[10px] font-semibold uppercase px-1.5 py-0.2 rounded-full bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
-                  Standard
+              <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5 truncate">
+                <span className="truncate max-w-[130px]">
+                  {user?.org_name || (user?.role === "owner" ? `${user.name}'s Store` : "Whoopit IMS")}
+                </span>
+                <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                  {user?.org_plan || "Store"}
                 </span>
               </span>
               <span className="text-[11px] text-slate-400 truncate">
-                Inventory Management System
+                {user?.role === "owner" ? "Private Store Workspace" : "Inventory Management System"}
               </span>
             </div>
           )}
