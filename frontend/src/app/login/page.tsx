@@ -10,25 +10,20 @@ import {
   ArrowRight,
   ShieldCheck,
   Sparkles,
-  Shield,
-  Store,
   AlertCircle,
   Loader2,
-  CheckCircle2,
   Layers,
   Cpu,
   Database,
   Building2,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
   const { login, isLoading } = useAuth();
 
-  const [selectedAccount, setSelectedAccount] = useState<"admin" | "staff" | "custom">("admin");
-  const [email, setEmail] = useState("admin@whoopit.io");
-  const [password, setPassword] = useState("AdminPass123!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -52,13 +47,6 @@ export default function LoginPage() {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const handleQuickFill = (accountType: "admin" | "staff", demoEmail: string, demoPass: string) => {
-    setSelectedAccount(accountType);
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setErrorMsg(null);
   };
 
   return (
@@ -163,9 +151,9 @@ export default function LoginPage() {
       </div>
 
       {/* ========================================================= */}
-      {/* RIGHT COLUMN: Clean, Ultra-Professional Login Panel       */}
+      {/* RIGHT COLUMN: Clean, Ultra-Professional Simple Login Form */}
       {/* ========================================================= */}
-      <div className="lg:w-[50%] xl:w-[48%] flex flex-col justify-center px-6 py-10 sm:px-12 lg:px-14 xl:px-20 bg-white relative">
+      <div className="lg:w-[50%] xl:w-[48%] flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-14 xl:px-20 bg-white relative">
         {/* Subtle Decorative Pattern */}
         <div
           className="absolute inset-0 pointer-events-none opacity-[0.035]"
@@ -175,9 +163,9 @@ export default function LoginPage() {
           }}
         />
 
-        <div className="w-full max-w-md mx-auto space-y-6 relative z-10">
+        <div className="w-full max-w-md mx-auto space-y-7 relative z-10">
           {/* Header */}
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold mb-1">
               <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
               <span>Secure Authentication Portal</span>
@@ -186,86 +174,8 @@ export default function LoginPage() {
               Welcome back
             </h1>
             <p className="text-sm text-slate-500">
-              Please enter your credentials or select an account below to sign in to your workspace.
+              Please enter your credentials to sign in to your workspace.
             </p>
-          </div>
-
-          {/* 1-Click Fast Account Switcher Cards */}
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-              <span className="flex items-center gap-1.5">
-                <span>Select quick account:</span>
-              </span>
-              <span className="text-[11px] text-indigo-600 font-medium">1-click test fill</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              {/* Account Card 1: Admin */}
-              <button
-                type="button"
-                onClick={() => handleQuickFill("admin", "admin@whoopit.io", "AdminPass123!")}
-                className={cn(
-                  "p-3 rounded-xl border text-left cursor-pointer transition-all duration-200 relative group flex flex-col justify-between gap-2",
-                  selectedAccount === "admin"
-                    ? "bg-indigo-50/90 border-indigo-500 shadow-sm shadow-indigo-500/10 ring-2 ring-indigo-500/20"
-                    : "bg-slate-50 hover:bg-slate-100/80 border-slate-200 text-slate-600"
-                )}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <div className={cn(
-                      "w-7 h-7 rounded-lg flex items-center justify-center transition-colors",
-                      selectedAccount === "admin" ? "bg-indigo-600 text-white" : "bg-slate-200 text-slate-700"
-                    )}>
-                      <Shield className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <span className="text-xs font-bold text-slate-900 block leading-tight">Master Admin</span>
-                      <span className="text-[10px] text-indigo-600 font-semibold">SuperAdmin</span>
-                    </div>
-                  </div>
-                  {selectedAccount === "admin" && (
-                    <CheckCircle2 className="w-4 h-4 text-indigo-600 flex-shrink-0" />
-                  )}
-                </div>
-                <span className="text-[11px] text-slate-500 font-mono truncate w-full">
-                  admin@whoopit.io
-                </span>
-              </button>
-
-              {/* Account Card 2: Store Staff */}
-              <button
-                type="button"
-                onClick={() => handleQuickFill("staff", "staff@whoopit.io", "StaffPass123!")}
-                className={cn(
-                  "p-3 rounded-xl border text-left cursor-pointer transition-all duration-200 relative group flex flex-col justify-between gap-2",
-                  selectedAccount === "staff"
-                    ? "bg-amber-50/90 border-amber-500 shadow-sm shadow-amber-500/10 ring-2 ring-amber-500/20"
-                    : "bg-slate-50 hover:bg-slate-100/80 border-slate-200 text-slate-600"
-                )}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <div className={cn(
-                      "w-7 h-7 rounded-lg flex items-center justify-center transition-colors",
-                      selectedAccount === "staff" ? "bg-amber-500 text-slate-950 font-bold" : "bg-slate-200 text-slate-700"
-                    )}>
-                      <Store className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <span className="text-xs font-bold text-slate-900 block leading-tight">Store User</span>
-                      <span className="text-[10px] text-amber-700 font-semibold">Staff Client</span>
-                    </div>
-                  </div>
-                  {selectedAccount === "staff" && (
-                    <CheckCircle2 className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                  )}
-                </div>
-                <span className="text-[11px] text-slate-500 font-mono truncate w-full">
-                  staff@whoopit.io
-                </span>
-              </button>
-            </div>
           </div>
 
           {/* Error Message */}
@@ -280,7 +190,7 @@ export default function LoginPage() {
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email Field */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 block">
@@ -292,19 +202,9 @@ export default function LoginPage() {
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setEmail(val);
-                    if (val === "admin@whoopit.io") {
-                      setSelectedAccount("admin");
-                    } else if (val === "staff@whoopit.io") {
-                      setSelectedAccount("staff");
-                    } else {
-                      setSelectedAccount("custom");
-                    }
-                  }}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@company.com"
-                  className="w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl bg-slate-50 hover:bg-slate-50/80 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all duration-200"
+                  className="w-full pl-10 pr-3.5 py-3 text-sm rounded-xl bg-slate-50 hover:bg-slate-50/80 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all duration-200"
                 />
               </div>
             </div>
@@ -324,7 +224,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full pl-10 pr-10 py-2.5 text-sm rounded-xl bg-slate-50 hover:bg-slate-50/80 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all duration-200"
+                  className="w-full pl-10 pr-10 py-3 text-sm rounded-xl bg-slate-50 hover:bg-slate-50/80 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all duration-200"
                 />
                 <button
                   type="button"
@@ -358,7 +258,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={submitting || isLoading}
-              className="w-full mt-2 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-sm shadow-md shadow-indigo-600/25 hover:shadow-lg hover:shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full mt-2 py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-sm shadow-md shadow-indigo-600/25 hover:shadow-lg hover:shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? (
                 <>
@@ -367,13 +267,7 @@ export default function LoginPage() {
                 </>
               ) : (
                 <>
-                  <span>
-                    {selectedAccount === "admin"
-                      ? "Sign In to Admin Portal"
-                      : selectedAccount === "staff"
-                      ? "Sign In to Store Software"
-                      : "Sign In to Workspace"}
-                  </span>
+                  <span>Sign In</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -381,7 +275,7 @@ export default function LoginPage() {
           </form>
 
           {/* Provisioning Notice */}
-          <div className="pt-4 border-t border-slate-100 text-center space-y-2">
+          <div className="pt-6 border-t border-slate-100 text-center space-y-2">
             <p className="text-xs text-slate-500">
               Need credentials for a new company or store?{" "}
               <span className="text-indigo-600 font-semibold block sm:inline">
