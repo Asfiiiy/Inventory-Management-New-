@@ -330,8 +330,36 @@ function ProductsMasterContent() {
                 </tr>
               ) : filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-8 text-center text-slate-400">
-                    No products found matching the criteria.
+                  <td colSpan={8} className="px-5 py-12 text-center text-slate-400">
+                    <div className="max-w-md mx-auto space-y-3">
+                      <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mx-auto border border-indigo-500/20">
+                        <Package className="w-6 h-6" />
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                        {products.length === 0 ? "Your Inventory Catalog is Fresh & Empty (0 SKUs)" : "No matching products found"}
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {products.length === 0
+                          ? "This company starts with a completely clean database. Click below to add your first product or import your existing catalog via CSV."
+                          : "Try adjusting your search query or category filters to find the item."}
+                      </p>
+                      {products.length === 0 && isAdmin && (
+                        <div className="flex items-center justify-center gap-2 pt-2">
+                          <button
+                            onClick={handleOpenAdd}
+                            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
+                          >
+                            + Add First Product
+                          </button>
+                          <Link
+                            href="/import"
+                            className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-all"
+                          >
+                            Bulk Import CSV
+                          </Link>
+                        </div>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (

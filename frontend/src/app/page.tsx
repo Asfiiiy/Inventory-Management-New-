@@ -63,15 +63,15 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const { isAdmin, isSuperAdmin, isStaff, isLoading: isAuthLoading } = useAuth();
 
-  // If Admin lands on the store software without ?preview=true, redirect to Master Admin Control Room
+  // If Master Platform Admin (Hum) lands on the store software without ?preview=true, redirect to Master Admin Control Room
   useEffect(() => {
     if (typeof window !== "undefined") {
       const isPreview = window.location.search.includes("preview=true");
-      if (!isAuthLoading && (isAdmin || isSuperAdmin) && !isPreview) {
+      if (!isAuthLoading && isSuperAdmin && !isPreview) {
         window.location.href = "/admin";
       }
     }
-  }, [isAdmin, isSuperAdmin, isAuthLoading]);
+  }, [isSuperAdmin, isAuthLoading]);
 
   const [isSeeding, setIsSeeding] = useState(false);
   const [backendAlerts, setBackendAlerts] = useState<StockAlert[]>([]);
@@ -249,6 +249,97 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Fresh Start / 0-Data Onboarding Hero for Newly Provisioned Companies */}
+      {products.length === 0 && !isStoreLoading && (
+        <div className="relative overflow-hidden rounded-3xl border border-indigo-500/20 bg-gradient-to-br from-indigo-950/40 via-slate-900/80 to-purple-950/30 p-6 sm:p-8 backdrop-blur-xl shadow-2xl">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+            <div className="space-y-3 max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>Fresh Company Workspace &bull; 0 Historical Data &bull; Clean Slate</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                Welcome to your Clean Software Workspace!
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                Your software instance is live with a clean start (<strong className="text-white font-semibold">0 Products, 0 Stock Movements, $0 Valuation</strong>). All data you record here is strictly isolated via PostgreSQL 18 Row-Level Security (RLS) and is 100% private to your company.
+              </p>
+              <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-slate-400">
+                <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  Isolated Tenant Database
+                </span>
+                <span className="text-slate-600">&bull;</span>
+                <span className="flex items-center gap-1.5 text-indigo-300 font-medium">
+                  <ShieldCheck className="w-4 h-4 text-indigo-400" />
+                  Full Store Admin Active
+                </span>
+                <span className="text-slate-600">&bull;</span>
+                <span className="flex items-center gap-1.5 text-amber-300 font-medium">
+                  <Database className="w-4 h-4 text-amber-400" />
+                  0 SKUs &bull; Ready for Operations
+                </span>
+              </div>
+            </div>
+
+            {/* Quick 4 Setup Actions */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-[300px]">
+              <Link
+                href="/products?action=new"
+                className="flex items-center gap-3 p-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/25 transition-all group"
+              >
+                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                  <Plus className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <span className="text-xs font-bold block">1. Add First Product</span>
+                  <span className="text-[10px] text-indigo-100">Create custom SKU &amp; price</span>
+                </div>
+              </Link>
+
+              <Link
+                href="/import"
+                className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 text-white transition-all group"
+              >
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <span className="text-xs font-bold block">2. Bulk Import CSV</span>
+                  <span className="text-[10px] text-slate-400">Upload existing catalog</span>
+                </div>
+              </Link>
+
+              <Link
+                href="/stock-in"
+                className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 text-white transition-all group"
+              >
+                <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                  <ArrowDownLeft className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <span className="text-xs font-bold block">3. Inward Stock In</span>
+                  <span className="text-[10px] text-slate-400">Receive supplier stock</span>
+                </div>
+              </Link>
+
+              <Link
+                href="/contacts"
+                className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 text-white transition-all group"
+              >
+                <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <span className="text-xs font-bold block">4. Add Vendors</span>
+                  <span className="text-[10px] text-slate-400">Manage supplier directory</span>
+                </div>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 4 Core Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

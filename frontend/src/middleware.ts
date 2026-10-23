@@ -37,28 +37,26 @@ export function middleware(request: NextRequest) {
 
   // 2. Decode user identity from JWT
   const payload = token ? decodeJwtPayload(token) : null;
-  const isAdmin =
-    payload?.role === "admin" ||
+  const isMasterAdmin =
     payload?.role === "superadmin" ||
     payload?.email === "admin@whoopit.io";
 
   // 3. If authenticated user visits /login, redirect directly to their respective portal
   if (token && isLoginPage) {
-    const targetUrl = new URL(isAdmin ? "/admin" : "/", request.url);
+    const targetUrl = new URL(isMasterAdmin ? "/admin" : "/", request.url);
     return NextResponse.redirect(targetUrl);
   }
 
   // 4. Role-based isolation:
-  // If Admin visits root `/`, route them to their Master Admin Control Room `/admin`
-  // (unless previewing a store via `?preview=true`)
+  // If Master Platform Admin (Hum) visits root `/`, route them to their Master Admin Control Room `/admin`
   const isPreview = request.nextUrl.searchParams.get("preview") === "true";
-  if (token && isAdmin && pathname === "/" && !isPreview) {
+  if (token && isMasterAdmin && pathname === "/" && !isPreview) {
     const adminUrl = new URL("/admin", request.url);
     return NextResponse.redirect(adminUrl);
   }
 
-  // 5. If non-admin (staff / shopkeeper) attempts to visit `/admin`, block and redirect to store software `/`
-  if (token && !isAdmin && pathname.startsWith("/admin")) {
+  // 5. If client company (owner / staff / shopkeeper) attempts to visit `/admin`, block and redirect to store software `/`
+  if (token && !isMasterAdmin && pathname.startsWith("/admin")) {
     const storeUrl = new URL("/", request.url);
     return NextResponse.redirect(storeUrl);
   }

@@ -30,6 +30,7 @@ import {
   ShieldCheck,
   Clock,
   UserCheck,
+  Copy,
 } from "lucide-react";
 import {
   apiClient,
@@ -93,6 +94,13 @@ function AdminPortalContent() {
   const [managerName, setManagerName] = useState("");
   const [managerEmail, setManagerEmail] = useState("");
   const [managerPassword, setManagerPassword] = useState("Password123!");
+  const [createdCredentials, setCreatedCredentials] = useState<{
+    name: string;
+    slug: string;
+    email: string;
+    password: string;
+    plan: string;
+  } | null>(null);
 
   // Selected Client for Details & Activity Modal
   const [selectedClient, setSelectedClient] = useState<OrganizationSummary | null>(null);
@@ -234,11 +242,18 @@ function AdminPortalContent() {
       if (res.success && res.data) {
         toast({
           title: "Software Given Successfully!",
-          description: `Created software workspace for "${clientName}".`,
+          description: `Created clean software workspace for "${clientName}".`,
           variant: "success",
         });
 
-        setIsModalOpen(false);
+        setCreatedCredentials({
+          name: clientName,
+          slug: clientSlug || res.data.slug || clientName.toLowerCase().replace(/\s+/g, "-"),
+          email: managerEmail,
+          password: managerPassword,
+          plan: clientPlan,
+        });
+
         setClientName("");
         setClientSlug("");
         setManagerName("");
@@ -1313,127 +1328,224 @@ function AdminPortalContent() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateClient} className="space-y-4 text-xs">
-              <div className="space-y-3">
-                <div>
-                  <label className="block font-medium text-slate-400 mb-1">
-                    Client / Shop Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Al-Madina Hardware &amp; Store"
-                    value={clientName}
-                    onChange={(e) => {
-                      setClientName(e.target.value);
-                      if (!clientSlug) {
-                        setClientSlug(
-                          e.target.value
-                            .toLowerCase()
-                            .replace(/[^a-z0-9]/g, "-")
-                            .replace(/-+/g, "-")
-                        );
-                      }
-                    }}
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white"
-                  />
+            {createdCredentials ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 space-y-1">
+                  <div className="flex items-center gap-2 font-bold text-sm text-white">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span>Software Workspace Provisioned Successfully!</span>
+                  </div>
+                  <p className="text-xs text-slate-300">
+                    A completely clean, isolated software instance has been generated for <strong>{createdCredentials.name}</strong>.
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                {/* Credentials Handover Box */}
+                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3 font-mono text-xs">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 font-sans">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                      Client Handover Credentials
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                      {createdCredentials.plan.toUpperCase()} TIER
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Company Name:</span>
+                      <span className="text-white font-semibold">{createdCredentials.name}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Store Manager Email:</span>
+                      <span className="text-indigo-400 font-bold">{createdCredentials.email}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Initial Password:</span>
+                      <span className="text-emerald-400 font-bold">{createdCredentials.password}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Initial State:</span>
+                      <span className="text-amber-400 font-semibold flex items-center gap-1">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                        0 Products &bull; Fresh Start
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Isolation:</span>
+                      <span className="text-slate-300">PostgreSQL 18 RLS Enforced</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-800/40 border border-slate-800 text-[11px] text-slate-400 leading-relaxed">
+                  💡 <strong>How it works:</strong> Give these credentials to the client. When they log in, they will be taken directly to their own store software (<code className="text-indigo-300">/</code>) with <strong>zero existing data</strong> so they can start fresh.
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+                      const text = `=== WHOOPIT SOFTWARE CREDENTIALS ===\nCompany: ${createdCredentials.name}\nPlan: ${createdCredentials.plan.toUpperCase()}\nLogin Email: ${createdCredentials.email}\nPassword: ${createdCredentials.password}\nSoftware Portal: ${origin}/login\nStatus: 100% Fresh Start (0 Data)\n===================================`;
+                      navigator.clipboard.writeText(text);
+                      toast({
+                        title: "Credentials Copied!",
+                        description: "Ready to share with the client via WhatsApp or Email.",
+                        variant: "success",
+                      });
+                    }}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all shadow-md shadow-indigo-600/20 cursor-pointer text-xs"
+                  >
+                    <Copy className="w-4 h-4" />
+                    <span>Copy Credentials</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreatedCredentials(null);
+                      setIsModalOpen(false);
+                    }}
+                    className="px-4 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 text-slate-300 font-semibold cursor-pointer text-xs"
+                  >
+                    Done &amp; Close
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleCreateClient} className="space-y-4 text-xs">
+                {/* 0-Data Guarantee Banner */}
+                <div className="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs flex items-start gap-2.5">
+                  <Sparkles className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="text-white block font-semibold">✨ Fresh Start Guarantee:</strong>
+                    <span className="text-[11px] text-slate-300">
+                      When this company logs in, their workspace will be <strong>100% clean with 0 data</strong> (0 products, 0 valuation, 0 movements) under isolated database Row Security.
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
                   <div>
                     <label className="block font-medium text-slate-400 mb-1">
-                      Custom URL Slug
+                      Client / Shop Name *
                     </label>
                     <input
                       type="text"
-                      placeholder="al-madina"
-                      value={clientSlug}
-                      onChange={(e) => setClientSlug(e.target.value)}
+                      required
+                      placeholder="e.g. Al-Madina Hardware &amp; Store"
+                      value={clientName}
+                      onChange={(e) => {
+                        setClientName(e.target.value);
+                        if (!clientSlug) {
+                          setClientSlug(
+                            e.target.value
+                              .toLowerCase()
+                              .replace(/[^a-z0-9]/g, "-")
+                              .replace(/-+/g, "-")
+                          );
+                        }
+                      }}
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-medium text-slate-400 mb-1">
+                        Custom URL Slug
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="al-madina"
+                        value={clientSlug}
+                        onChange={(e) => setClientSlug(e.target.value)}
+                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-medium text-slate-400 mb-1">
+                        License Plan
+                      </label>
+                      <select
+                        value={clientPlan}
+                        onChange={(e) => setClientPlan(e.target.value)}
+                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white cursor-pointer"
+                      >
+                        <option value="enterprise">Enterprise Tier</option>
+                        <option value="standard">Standard Tier</option>
+                        <option value="trial">30-Day Free Trial</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-800">
+                    <span className="text-[11px] font-bold text-indigo-400 uppercase tracking-wider block mb-2">
+                      Client Initial Manager Account
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-medium text-slate-400 mb-1">
+                        Manager Name
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Asif Khan"
+                        value={managerName}
+                        onChange={(e) => setManagerName(e.target.value)}
+                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-medium text-slate-400 mb-1">
+                        Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="asif@apex.com"
+                        value={managerEmail}
+                        onChange={(e) => setManagerEmail(e.target.value)}
+                        className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-medium text-slate-400 mb-1">
+                      Initial Password
+                    </label>
+                    <input
+                      type="text"
+                      value={managerPassword}
+                      onChange={(e) => setManagerPassword(e.target.value)}
                       className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono"
                     />
                   </div>
-
-                  <div>
-                    <label className="block font-medium text-slate-400 mb-1">
-                      License Plan
-                    </label>
-                    <select
-                      value={clientPlan}
-                      onChange={(e) => setClientPlan(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white cursor-pointer"
-                    >
-                      <option value="enterprise">Enterprise Tier</option>
-                      <option value="standard">Standard Tier</option>
-                      <option value="trial">30-Day Free Trial</option>
-                    </select>
-                  </div>
                 </div>
 
-                <div className="pt-2 border-t border-slate-800">
-                  <span className="text-[11px] font-bold text-indigo-400 uppercase tracking-wider block mb-2">
-                    Client Initial Manager Account
-                  </span>
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-4 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 text-slate-400 font-semibold cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold transition-all shadow-lg shadow-indigo-600/30 cursor-pointer disabled:opacity-50"
+                  >
+                    {isSubmitting ? "Creating Workspace..." : "Create & Give Software"}
+                  </button>
                 </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-medium text-slate-400 mb-1">
-                      Manager Name
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Asif Khan"
-                      value={managerName}
-                      onChange={(e) => setManagerName(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-medium text-slate-400 mb-1">
-                      Email Address *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="asif@apex.com"
-                      value={managerEmail}
-                      onChange={(e) => setManagerEmail(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block font-medium text-slate-400 mb-1">
-                    Initial Password
-                  </label>
-                  <input
-                    type="text"
-                    value={managerPassword}
-                    onChange={(e) => setManagerPassword(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 text-slate-400 font-semibold cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold transition-all shadow-lg shadow-indigo-600/30 cursor-pointer disabled:opacity-50"
-                >
-                  {isSubmitting ? "Creating Workspace..." : "Create & Give Software"}
-                </button>
-              </div>
-            </form>
+              </form>
+            )}
           </div>
         </div>
       )}

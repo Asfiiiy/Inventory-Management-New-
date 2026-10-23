@@ -72,10 +72,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (res.data) {
           setUser(res.data);
           localStorage.setItem("whoopit_auth_user", JSON.stringify(res.data));
-          const role =
-            res.data.role === "admin" || res.data.role === "superadmin" || res.data.email === "admin@whoopit.io"
-              ? "admin"
-              : "staff";
+          const isMaster =
+            res.data.role === "superadmin" || res.data.email === "admin@whoopit.io";
+          const role = isMaster ? "admin" : "client";
           localStorage.setItem("whoopit_auth_role", role);
           document.cookie = `whoopit_auth_role=${encodeURIComponent(role)}; path=/; max-age=604800; SameSite=Lax`;
           if (res.data.org_id) {
@@ -104,10 +103,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const res = await apiClient.auth.login({ email, password });
         const { token: receivedToken, user: receivedUser } = res.data;
 
-        const role =
-          receivedUser.role === "admin" || receivedUser.role === "superadmin" || receivedUser.email === "admin@whoopit.io"
-            ? "admin"
-            : "staff";
+        const isMaster =
+          receivedUser.role === "superadmin" || receivedUser.email === "admin@whoopit.io";
+        const role = isMaster ? "admin" : "client";
 
         setAuthToken(receivedToken, role);
         setTokenState(receivedToken);
@@ -120,7 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (targetRedirect) {
           router.push(targetRedirect);
-        } else if (role === "admin") {
+        } else if (isMaster) {
           router.push("/admin");
         } else {
           router.push("/");
@@ -163,9 +161,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push("/login");
   }, [router]);
 
-  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
   const isSuperAdmin = user?.email === "admin@whoopit.io" || user?.role === "superadmin";
-  const isStaff = user?.role === "staff";
+  const isAdmin = user?.role === "owner" || user?.role === "admin" || user?.role === "superadmin";
+  const isStaff = user?.role === "staff" || user?.role === "employee";
   const isAuthenticated = !!token && !!user;
 
   return (

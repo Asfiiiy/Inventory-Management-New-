@@ -149,10 +149,34 @@ const defaultContacts: Contact[] = [
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
 
+function getTenantOrgId(): string {
+  if (typeof window === "undefined") return "default";
+  try {
+    const userStr = localStorage.getItem("whoopit_auth_user");
+    return userStr ? JSON.parse(userStr)?.org_id || "default" : "default";
+  } catch {
+    return "default";
+  }
+}
+
 export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
-  const [contacts, setContacts] = useState<Contact[]>(defaultContacts);
+  const [contacts, setContacts] = useState<Contact[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const orgId = getTenantOrgId();
+      const saved = localStorage.getItem(`whoopit_contacts_${orgId}`);
+      if (saved) return JSON.parse(saved);
+      // Only demo tenant gets initial sample contacts
+      if (orgId === "a0000000-0000-0000-0000-000000000001") {
+        return defaultContacts;
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  });
   const [locations, setLocations] = useState<StandardLocations>(DEFAULT_LOCATIONS);
   const [isLoading, setIsLoading] = useState(true);
   const [isBackendConnected, setIsBackendConnected] = useState(false);
@@ -492,11 +516,23 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
   const addContact = (data: Omit<Contact, "id">) => {
     const newContact: Contact = { ...data, id: "cont-" + Date.now() };
-    setContacts((prev) => [newContact, ...prev]);
+    setContacts((prev) => {
+      const next = [newContact, ...prev];
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`whoopit_contacts_${getTenantOrgId()}`, JSON.stringify(next));
+      }
+      return next;
+    });
   };
 
   const deleteContact = (id: string) => {
-    setContacts((prev) => prev.filter((c) => c.id !== id));
+    setContacts((prev) => {
+      const next = prev.filter((c) => c.id !== id);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`whoopit_contacts_${getTenantOrgId()}`, JSON.stringify(next));
+      }
+      return next;
+    });
   };
 
 
