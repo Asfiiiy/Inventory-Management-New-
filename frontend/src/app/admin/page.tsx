@@ -79,6 +79,43 @@ function AdminPortalContent() {
   const [planFilter, setPlanFilter] = useState("ALL");
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [userRoleFilter, setUserRoleFilter] = useState("ALL");
+  const [auditSearchQuery, setAuditSearchQuery] = useState("");
+  const [auditActionFilter, setAuditActionFilter] = useState("ALL");
+
+  // Sync tab and filters with URL search parameters on load
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab") as AdminTab;
+      if (tabParam && ["overview", "clients", "licenses", "users", "system", "audit"].includes(tabParam)) {
+        setActiveTab(tabParam);
+      }
+      const planParam = params.get("plan");
+      if (planParam) {
+        setPlanFilter(planParam);
+      }
+    }
+  }, []);
+
+  const handleTabChange = (tab: AdminTab, plan?: string, query?: string) => {
+    setActiveTab(tab);
+    if (plan !== undefined) {
+      setPlanFilter(plan);
+    }
+    if (query !== undefined) {
+      setSearchQuery(query);
+    }
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", tab);
+      if (plan && plan !== "ALL") {
+        url.searchParams.set("plan", plan);
+      } else {
+        url.searchParams.delete("plan");
+      }
+      window.history.pushState(null, "", url.toString());
+    }
+  };
 
   // Modal State for Giving Software
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -291,6 +328,20 @@ function AdminPortalContent() {
     return matchesRole && matchesSearch;
   });
 
+  // Filter audit logs
+  const filteredAuditLogs = auditLogs.filter((ev) => {
+    const matchesAction = auditActionFilter === "ALL" || ev.action.toLowerCase() === auditActionFilter.toLowerCase();
+    const q = auditSearchQuery.toLowerCase().trim();
+    const matchesSearch =
+      !q ||
+      ev.action.toLowerCase().includes(q) ||
+      ev.entity_type.toLowerCase().includes(q) ||
+      ev.entity_id.toLowerCase().includes(q) ||
+      ev.org_name.toLowerCase().includes(q) ||
+      ev.user_email.toLowerCase().includes(q);
+    return matchesAction && matchesSearch;
+  });
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#f4f7f9] text-slate-800 font-sans selection:bg-[#0c3843] selection:text-white">
       {/* ======================================================== */}
@@ -327,7 +378,7 @@ function AdminPortalContent() {
           {/* Primary Navigation Tabs */}
           <nav className="px-3 py-1 space-y-1">
             <button
-              onClick={() => setActiveTab("overview")}
+              onClick={() => handleTabChange("overview")}
               className={cn(
                 "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer",
                 activeTab === "overview"
@@ -342,7 +393,7 @@ function AdminPortalContent() {
             </button>
 
             <button
-              onClick={() => setActiveTab("clients")}
+              onClick={() => handleTabChange("clients")}
               className={cn(
                 "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer",
                 activeTab === "clients"
@@ -360,7 +411,7 @@ function AdminPortalContent() {
             </button>
 
             <button
-              onClick={() => setActiveTab("licenses")}
+              onClick={() => handleTabChange("licenses")}
               className={cn(
                 "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer",
                 activeTab === "licenses"
@@ -378,7 +429,7 @@ function AdminPortalContent() {
             </button>
 
             <button
-              onClick={() => setActiveTab("users")}
+              onClick={() => handleTabChange("users")}
               className={cn(
                 "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer",
                 activeTab === "users"
@@ -396,7 +447,7 @@ function AdminPortalContent() {
             </button>
 
             <button
-              onClick={() => setActiveTab("system")}
+              onClick={() => handleTabChange("system")}
               className={cn(
                 "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer",
                 activeTab === "system"
@@ -412,7 +463,7 @@ function AdminPortalContent() {
             </button>
 
             <button
-              onClick={() => setActiveTab("audit")}
+              onClick={() => handleTabChange("audit")}
               className={cn(
                 "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer",
                 activeTab === "audit"
@@ -536,87 +587,117 @@ function AdminPortalContent() {
 
               {/* 4 Executive KPI Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Card 1: Clients Given Software */}
                 <div
-                  onClick={() => setActiveTab("clients")}
-                  className="p-5 rounded-2xl border border-slate-200/80 bg-white shadow-xs relative overflow-hidden group hover:border-[#0c3843]/50 hover:shadow-md transition-all cursor-pointer"
+                  onClick={() => handleTabChange("clients", "ALL")}
+                  className="p-5 rounded-2xl border border-slate-200/80 bg-white shadow-xs relative overflow-hidden group hover:-translate-y-1.5 hover:shadow-xl hover:shadow-[#0c3843]/10 hover:border-[#0c3843] transition-all duration-300 cursor-pointer select-none"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-[#0c3843] transition-colors">
                       Clients Given Software
                     </span>
-                    <div className="w-10 h-10 rounded-xl bg-[#0c3843]/10 text-[#0c3843] flex items-center justify-center border border-[#0c3843]/15">
+                    <div className="w-10 h-10 rounded-xl bg-[#0c3843]/10 text-[#0c3843] flex items-center justify-center border border-[#0c3843]/15 group-hover:scale-110 group-hover:bg-[#0c3843] group-hover:text-cyan-300 transition-all duration-300 shadow-2xs">
                       <Building2 className="w-5 h-5" />
                     </div>
                   </div>
-                  <div className="text-3xl font-extrabold text-slate-900 mt-3">
+                  <div className="text-3xl font-extrabold text-slate-900 mt-3 group-hover:text-[#0c3843] transition-colors">
                     {telemetry ? telemetry.total_organizations : clients.length}
                   </div>
-                  <div className="flex items-center gap-1.5 mt-2 text-[11px] text-emerald-600 font-semibold">
-                    <TrendingUp className="w-3.5 h-3.5" />
-                    <span>{clients.length} Companies Tracked</span>
+                  <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100 text-[11px]">
+                    <div className="flex items-center gap-1.5 text-emerald-600 font-semibold">
+                      <TrendingUp className="w-3.5 h-3.5" />
+                      <span>{clients.length} Companies Tracked</span>
+                    </div>
+                    <span className="text-slate-400 group-hover:text-[#0c3843] font-bold flex items-center gap-0.5 transition-colors">
+                      View Directory <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                    </span>
                   </div>
                 </div>
 
+                {/* Card 2: Enterprise Clients */}
                 <div
-                  onClick={() => setActiveTab("licenses")}
-                  className="p-5 rounded-2xl border border-slate-200/80 bg-white shadow-xs relative overflow-hidden group hover:border-purple-400 hover:shadow-md transition-all cursor-pointer"
+                  onClick={() => handleTabChange("clients", "enterprise")}
+                  className="p-5 rounded-2xl border border-slate-200/80 bg-white shadow-xs relative overflow-hidden group hover:-translate-y-1.5 hover:shadow-xl hover:shadow-purple-500/10 hover:border-purple-400 transition-all duration-300 cursor-pointer select-none"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-purple-600 transition-colors">
                       Enterprise Clients
                     </span>
-                    <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-200">
+                    <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-200 group-hover:scale-110 group-hover:bg-purple-600 group-hover:text-white transition-all duration-300 shadow-2xs">
                       <Briefcase className="w-5 h-5" />
                     </div>
                   </div>
-                  <div className="text-3xl font-extrabold text-slate-900 mt-3">
+                  <div className="text-3xl font-extrabold text-slate-900 mt-3 group-hover:text-purple-700 transition-colors">
                     {telemetry ? telemetry.active_enterprises : 0}
                   </div>
-                  <div className="flex items-center gap-1.5 mt-2 text-[11px] text-purple-600 font-semibold">
-                    <span>Paid &amp; Unlimited Tier</span>
+                  <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100 text-[11px]">
+                    <div className="flex items-center gap-1.5 text-purple-600 font-semibold">
+                      <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                      <span>Paid &amp; Unlimited Tier</span>
+                    </div>
+                    <span className="text-slate-400 group-hover:text-purple-600 font-bold flex items-center gap-0.5 transition-colors">
+                      Filter Tier <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                    </span>
                   </div>
                 </div>
 
+                {/* Card 3: Total End-Users */}
                 <div
-                  onClick={() => setActiveTab("users")}
-                  className="p-5 rounded-2xl border border-slate-200/80 bg-white shadow-xs relative overflow-hidden group hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
+                  onClick={() => handleTabChange("users")}
+                  className="p-5 rounded-2xl border border-slate-200/80 bg-white shadow-xs relative overflow-hidden group hover:-translate-y-1.5 hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-400 transition-all duration-300 cursor-pointer select-none"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-blue-600 transition-colors">
                       Total End-Users
                     </span>
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200 group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-2xs">
                       <Users className="w-5 h-5" />
                     </div>
                   </div>
-                  <div className="text-3xl font-extrabold text-slate-900 mt-3">
+                  <div className="text-3xl font-extrabold text-slate-900 mt-3 group-hover:text-blue-700 transition-colors">
                     {usersList.length || (telemetry ? telemetry.total_users : 0)}
                   </div>
-                  <div className="flex items-center gap-1.5 mt-2 text-[11px] text-blue-600 font-semibold">
-                    <span>Active Staff Across All Clients</span>
+                  <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100 text-[11px]">
+                    <div className="flex items-center gap-1.5 text-blue-600 font-semibold">
+                      <Users className="w-3.5 h-3.5" />
+                      <span>Active Store Staff</span>
+                    </div>
+                    <span className="text-slate-400 group-hover:text-blue-600 font-bold flex items-center gap-0.5 transition-colors">
+                      View Users <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                    </span>
                   </div>
                 </div>
 
-                <div className="p-5 rounded-2xl border border-slate-200/80 bg-white shadow-xs relative overflow-hidden group hover:border-emerald-400 hover:shadow-md transition-all">
+                {/* Card 4: Total Store SKUs Tracked */}
+                <div
+                  onClick={() => handleTabChange("clients")}
+                  className="p-5 rounded-2xl border border-slate-200/80 bg-white shadow-xs relative overflow-hidden group hover:-translate-y-1.5 hover:shadow-xl hover:shadow-emerald-500/10 hover:border-emerald-400 transition-all duration-300 cursor-pointer select-none"
+                >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-emerald-600 transition-colors">
                       Total Store SKUs Tracked
                     </span>
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-200">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-200 group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300 shadow-2xs">
                       <Boxes className="w-5 h-5" />
                     </div>
                   </div>
-                  <div className="text-3xl font-extrabold text-slate-900 mt-3">
+                  <div className="text-3xl font-extrabold text-slate-900 mt-3 group-hover:text-emerald-700 transition-colors">
                     {telemetry ? telemetry.total_items.toLocaleString() : 0}
                   </div>
-                  <div className="flex items-center gap-1.5 mt-2 text-[11px] text-emerald-600 font-semibold">
-                    <span>Products in Client Stores</span>
+                  <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100 text-[11px]">
+                    <div className="flex items-center gap-1.5 text-emerald-600 font-semibold">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Products in Stores</span>
+                    </div>
+                    <span className="text-slate-400 group-hover:text-emerald-600 font-bold flex items-center gap-0.5 transition-colors">
+                      Client Inventory <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                    </span>
                   </div>
                 </div>
               </div>
 
               {/* License Distribution Progress Bar */}
-              <div className="p-6 rounded-2xl border border-slate-200/80 bg-white shadow-xs space-y-4">
+              <div className="p-6 rounded-2xl border border-slate-200/80 bg-white shadow-xs space-y-4 hover:border-slate-300/80 hover:shadow-md transition-all">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -624,12 +705,12 @@ function AdminPortalContent() {
                       <span>Software License Distribution</span>
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Visual allocation breakdown of active commercial packages across {clients.length} client companies.
+                      Visual allocation breakdown of active commercial packages across {clients.length} client companies. Click any plan to filter clients.
                     </p>
                   </div>
                   <button
-                    onClick={() => setActiveTab("licenses")}
-                    className="text-xs text-[#0c3843] hover:text-[#082931] font-bold flex items-center gap-1 cursor-pointer"
+                    onClick={() => handleTabChange("licenses")}
+                    className="text-xs text-[#0c3843] hover:text-[#082931] font-bold flex items-center gap-1 cursor-pointer px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors"
                   >
                     <span>Manage Plans</span>
                     <ChevronRight className="w-3.5 h-3.5" />
@@ -637,7 +718,7 @@ function AdminPortalContent() {
                 </div>
 
                 {/* Progress bar */}
-                <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden flex cursor-pointer" onClick={() => handleTabChange("licenses")}>
                   <div
                     style={{
                       width: `${
@@ -646,7 +727,7 @@ function AdminPortalContent() {
                           : 70
                       }%`,
                     }}
-                    className="bg-purple-500 transition-all"
+                    className="bg-purple-500 hover:bg-purple-600 transition-all"
                     title="Enterprise Tier"
                   />
                   <div
@@ -657,7 +738,7 @@ function AdminPortalContent() {
                           : 20
                       }%`,
                     }}
-                    className="bg-blue-500 transition-all"
+                    className="bg-blue-500 hover:bg-blue-600 transition-all"
                     title="Standard Tier"
                   />
                   <div
@@ -668,46 +749,63 @@ function AdminPortalContent() {
                           : 10
                       }%`,
                     }}
-                    className="bg-amber-400 transition-all"
+                    className="bg-amber-400 hover:bg-amber-500 transition-all"
                     title="30-Day Trial"
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 pt-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-md bg-purple-500" />
-                    <span className="text-xs text-slate-700 font-semibold">Enterprise:</span>
-                    <span className="text-xs font-mono font-bold text-purple-600">
-                      {telemetry?.active_enterprises || 0}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                  <div
+                    onClick={() => handleTabChange("clients", "enterprise")}
+                    className="flex items-center justify-between p-2.5 rounded-xl bg-purple-50/50 hover:bg-purple-100/70 border border-purple-100/70 cursor-pointer transition-colors group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-md bg-purple-500 group-hover:scale-110 transition-transform" />
+                      <span className="text-xs text-purple-900 font-semibold">Enterprise:</span>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-purple-700">
+                      {telemetry?.active_enterprises || 0} Clients &rarr;
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-md bg-blue-500" />
-                    <span className="text-xs text-slate-700 font-semibold">Standard:</span>
-                    <span className="text-xs font-mono font-bold text-blue-600">
-                      {telemetry?.active_standards || 0}
+
+                  <div
+                    onClick={() => handleTabChange("clients", "standard")}
+                    className="flex items-center justify-between p-2.5 rounded-xl bg-blue-50/50 hover:bg-blue-100/70 border border-blue-100/70 cursor-pointer transition-colors group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-md bg-blue-500 group-hover:scale-110 transition-transform" />
+                      <span className="text-xs text-blue-900 font-semibold">Standard:</span>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-blue-700">
+                      {telemetry?.active_standards || 0} Clients &rarr;
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-md bg-amber-400" />
-                    <span className="text-xs text-slate-700 font-semibold">30-Day Trial:</span>
-                    <span className="text-xs font-mono font-bold text-amber-600">
-                      {telemetry?.active_trials || 0}
+
+                  <div
+                    onClick={() => handleTabChange("clients", "trial")}
+                    className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50/50 hover:bg-amber-100/70 border border-amber-100/70 cursor-pointer transition-colors group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-md bg-amber-400 group-hover:scale-110 transition-transform" />
+                      <span className="text-xs text-amber-900 font-semibold">30-Day Trial:</span>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-amber-700">
+                      {telemetry?.active_trials || 0} Clients &rarr;
                     </span>
                   </div>
                 </div>
               </div>
 
               {/* Recent Audit Events Ticker */}
-              <div className="p-6 rounded-2xl border border-slate-200/80 bg-white shadow-xs space-y-4">
+              <div className="p-6 rounded-2xl border border-slate-200/80 bg-white shadow-xs space-y-4 hover:border-slate-300/80 hover:shadow-md transition-all">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-[#0c3843]" />
                     <span className="text-sm font-bold text-slate-900">Recent Platform Audit Events</span>
                   </div>
                   <button
-                    onClick={() => setActiveTab("audit")}
-                    className="text-xs text-[#0c3843] hover:text-[#082931] font-bold flex items-center gap-1 cursor-pointer"
+                    onClick={() => handleTabChange("audit")}
+                    className="text-xs text-[#0c3843] hover:text-[#082931] font-bold flex items-center gap-1 cursor-pointer px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors"
                   >
                     <span>View All {auditLogs.length} Logs</span>
                     <ChevronRight className="w-3.5 h-3.5" />
@@ -716,17 +814,22 @@ function AdminPortalContent() {
 
                 <div className="divide-y divide-slate-100">
                   {auditLogs.slice(0, 4).map((log) => (
-                    <div key={log.audit_id} className="py-3 flex items-center justify-between text-xs hover:bg-slate-50/60 px-1 rounded-lg transition-colors">
+                    <div
+                      key={log.audit_id}
+                      onClick={() => handleTabChange("audit")}
+                      className="py-3 flex items-center justify-between text-xs hover:bg-slate-50 px-2 rounded-xl transition-colors cursor-pointer group"
+                    >
                       <div className="flex items-center gap-3">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 group-hover:scale-125 transition-transform" />
                         <div>
-                          <span className="font-bold text-slate-900">{log.action}</span>
+                          <span className="font-bold text-slate-900 group-hover:text-[#0c3843] transition-colors">{log.action}</span>
                           <span className="text-slate-500 ml-2">in {log.org_name}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-4 text-slate-500 font-mono text-[11px]">
                         <span>{log.user_email}</span>
                         <span>{new Date(log.created_at).toLocaleTimeString()}</span>
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-[#0c3843] group-hover:translate-x-0.5 transition-all" />
                       </div>
                     </div>
                   ))}
@@ -775,6 +878,35 @@ function AdminPortalContent() {
                   </button>
                 </div>
               </div>
+
+              {/* Active Filter Indicator if arrived from KPI cards */}
+              {(planFilter !== "ALL" || searchQuery) && (
+                <div className="px-4 py-2.5 rounded-2xl bg-white border border-[#0c3843]/20 shadow-xs flex items-center justify-between text-xs text-slate-800 animate-in fade-in">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#0c3843] animate-pulse" />
+                    <span>
+                      Filtered view: {planFilter !== "ALL" && (
+                        <span className="font-extrabold uppercase text-[#0c3843] bg-[#0c3843]/10 px-2 py-0.5 rounded-md mr-1.5 border border-[#0c3843]/20">
+                          {planFilter} Tier
+                        </span>
+                      )}
+                      {searchQuery && (
+                        <span className="text-slate-600">Keyword: &quot;{searchQuery}&quot;</span>
+                      )}
+                      <span className="text-slate-500 font-semibold ml-1">({filteredClients.length} matching companies found)</span>
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setPlanFilter("ALL");
+                      setSearchQuery("");
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition-colors"
+                  >
+                    Reset Filters ✕
+                  </button>
+                </div>
+              )}
 
               {/* Master Clients Table */}
               <div className="rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
@@ -916,85 +1048,217 @@ function AdminPortalContent() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Enterprise Tier */}
-                <div className="p-6 rounded-3xl border border-purple-200 bg-white shadow-xs space-y-4 hover:shadow-md transition-all">
-                  <div className="flex items-center justify-between">
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">
-                      Enterprise Tier
-                    </span>
-                    <span className="text-2xl font-extrabold text-slate-900">
-                      {telemetry?.active_enterprises || 0} Clients
-                    </span>
+                <div
+                  onClick={() => handleTabChange("clients", "enterprise")}
+                  className="p-6 rounded-3xl border border-purple-200 bg-white shadow-xs space-y-4 hover:-translate-y-1.5 hover:shadow-xl hover:border-purple-400 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">
+                        Enterprise Tier
+                      </span>
+                      <span className="text-2xl font-extrabold text-slate-900 group-hover:text-purple-700 transition-colors">
+                        {telemetry?.active_enterprises || 0} Clients
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900">Full Commercial License</h3>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Unlimited warehouses, full barcode engine, cryptographic tool custody, and double-entry stock ledger.
+                    </p>
+                    <ul className="text-xs text-slate-700 space-y-2 pt-2 border-t border-slate-100">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />
+                        <span>Unlimited items &amp; movements</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />
+                        <span>Custom Fields Builder</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />
+                        <span>Priority Support &amp; RLS Isolation</span>
+                      </li>
+                    </ul>
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900">Full Commercial License</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Unlimited warehouses, full barcode engine, cryptographic tool custody, and double-entry stock ledger.
-                  </p>
-                  <ul className="text-xs text-slate-700 space-y-2 pt-2 border-t border-slate-100">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />
-                      <span>Unlimited items &amp; movements</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />
-                      <span>Custom Fields Builder</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />
-                      <span>Priority Support &amp; RLS Isolation</span>
-                    </li>
-                  </ul>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTabChange("clients", "enterprise");
+                    }}
+                    className="w-full mt-4 py-2.5 px-3.5 rounded-xl bg-purple-50 hover:bg-purple-600 text-purple-700 hover:text-white border border-purple-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs group-hover:bg-purple-600 group-hover:text-white"
+                  >
+                    <span>View All {telemetry?.active_enterprises || 0} Enterprise Clients</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
 
                 {/* Standard Tier */}
-                <div className="p-6 rounded-3xl border border-blue-200 bg-white shadow-xs space-y-4 hover:shadow-md transition-all">
-                  <div className="flex items-center justify-between">
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
-                      Standard Tier
-                    </span>
-                    <span className="text-2xl font-extrabold text-slate-900">
-                      {telemetry?.active_standards || 0} Clients
-                    </span>
+                <div
+                  onClick={() => handleTabChange("clients", "standard")}
+                  className="p-6 rounded-3xl border border-blue-200 bg-white shadow-xs space-y-4 hover:-translate-y-1.5 hover:shadow-xl hover:border-blue-400 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
+                        Standard Tier
+                      </span>
+                      <span className="text-2xl font-extrabold text-slate-900 group-hover:text-blue-700 transition-colors">
+                        {telemetry?.active_standards || 0} Clients
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900">Store Commercial License</h3>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Up to 3 standard warehouse locations, purchase &amp; sales invoices, and stock valuation.
+                    </p>
+                    <ul className="text-xs text-slate-700 space-y-2 pt-2 border-t border-slate-100">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Up to 5,000 active SKUs</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Standard Staff Role permissions</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Automated Barcode Generation</span>
+                      </li>
+                    </ul>
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900">Store Commercial License</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Up to 3 standard warehouse locations, purchase &amp; sales invoices, and stock valuation.
-                  </p>
-                  <ul className="text-xs text-slate-700 space-y-2 pt-2 border-t border-slate-100">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Up to 5,000 active SKUs</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Standard Staff Role permissions</span>
-                    </li>
-                  </ul>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTabChange("clients", "standard");
+                    }}
+                    className="w-full mt-4 py-2.5 px-3.5 rounded-xl bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white border border-blue-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs group-hover:bg-blue-600 group-hover:text-white"
+                  >
+                    <span>View All {telemetry?.active_standards || 0} Standard Clients</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
 
                 {/* Trial Tier */}
-                <div className="p-6 rounded-3xl border border-amber-200 bg-white shadow-xs space-y-4 hover:shadow-md transition-all">
-                  <div className="flex items-center justify-between">
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200">
-                      30-Day Trial
-                    </span>
-                    <span className="text-2xl font-extrabold text-slate-900">
-                      {telemetry?.active_trials || 0} Clients
-                    </span>
+                <div
+                  onClick={() => handleTabChange("clients", "trial")}
+                  className="p-6 rounded-3xl border border-amber-200 bg-white shadow-xs space-y-4 hover:-translate-y-1.5 hover:shadow-xl hover:border-amber-400 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200">
+                        30-Day Trial
+                      </span>
+                      <span className="text-2xl font-extrabold text-slate-900 group-hover:text-amber-700 transition-colors">
+                        {telemetry?.active_trials || 0} Clients
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900">Evaluation Package</h3>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Complimentary 30-day evaluation given to potential client shops to test their store flow.
+                    </p>
+                    <ul className="text-xs text-slate-700 space-y-2 pt-2 border-t border-slate-100">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-amber-500" />
+                        <span>30-Day automated expiry timer</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-amber-500" />
+                        <span>1-Click upgrade to Enterprise</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Fresh Start (0 Data) Isolation</span>
+                      </li>
+                    </ul>
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900">Evaluation Package</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Complimentary 30-day evaluation given to potential client shops to test their store flow.
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTabChange("clients", "trial");
+                    }}
+                    className="w-full mt-4 py-2.5 px-3.5 rounded-xl bg-amber-50 hover:bg-amber-600 text-amber-700 hover:text-white border border-amber-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs group-hover:bg-amber-600 group-hover:text-white"
+                  >
+                    <span>View All {telemetry?.active_trials || 0} Trial Clients</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Tier Feature Matrix Comparison Table */}
+              <div className="rounded-3xl border border-slate-200/80 bg-white shadow-xs overflow-hidden space-y-3 p-6">
+                <div className="border-b border-slate-100 pb-3">
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Sliders className="w-4 h-4 text-[#0c3843]" />
+                    <span>Commercial License Feature Matrix Comparison</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Detailed feature entitlement breakdown across Enterprise, Standard, and 30-Day Trial commercial plans.
                   </p>
-                  <ul className="text-xs text-slate-700 space-y-2 pt-2 border-t border-slate-100">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-amber-500" />
-                      <span>30-Day automated expiry timer</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-amber-500" />
-                      <span>1-Click upgrade to Enterprise</span>
-                    </li>
-                  </ul>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50/90 text-slate-700 border-b border-slate-200">
+                      <tr>
+                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px]">Feature / Entitlement</th>
+                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px] text-purple-700">Enterprise</th>
+                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px] text-blue-700">Standard</th>
+                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px] text-amber-700">30-Day Trial</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-600">
+                      <tr className="hover:bg-slate-50/50">
+                        <td className="py-3 px-4 font-bold text-slate-800">Multi-Warehouse Locations</td>
+                        <td className="py-3 px-4 text-purple-700 font-bold">Unlimited</td>
+                        <td className="py-3 px-4 text-slate-700 font-semibold">Up to 3 Locations</td>
+                        <td className="py-3 px-4 text-slate-500">1 Location</td>
+                      </tr>
+                      <tr className="hover:bg-slate-50/50">
+                        <td className="py-3 px-4 font-bold text-slate-800">Catalog SKU Capacity</td>
+                        <td className="py-3 px-4 text-purple-700 font-bold">Unlimited</td>
+                        <td className="py-3 px-4 text-slate-700 font-semibold">Up to 5,000 SKUs</td>
+                        <td className="py-3 px-4 text-slate-500">200 Evaluation SKUs</td>
+                      </tr>
+                      <tr className="hover:bg-slate-50/50">
+                        <td className="py-3 px-4 font-bold text-slate-800">Double-Entry Stock Ledger</td>
+                        <td className="py-3 px-4 text-emerald-600 font-bold">✓ Full Cryptographic</td>
+                        <td className="py-3 px-4 text-emerald-600 font-bold">✓ Included</td>
+                        <td className="py-3 px-4 text-emerald-600 font-bold">✓ Included</td>
+                      </tr>
+                      <tr className="hover:bg-slate-50/50">
+                        <td className="py-3 px-4 font-bold text-slate-800">Barcode Engine (EAN-13, QR)</td>
+                        <td className="py-3 px-4 text-emerald-600 font-bold">✓ Thermal &amp; A4 Print</td>
+                        <td className="py-3 px-4 text-emerald-600 font-bold">✓ Standard Print</td>
+                        <td className="py-3 px-4 text-emerald-600 font-bold">✓ Standard Print</td>
+                      </tr>
+                      <tr className="hover:bg-slate-50/50">
+                        <td className="py-3 px-4 font-bold text-slate-800">Custody Vouchers &amp; Signatures</td>
+                        <td className="py-3 px-4 text-emerald-600 font-bold">✓ Included</td>
+                        <td className="py-3 px-4 text-slate-400">— Not Included</td>
+                        <td className="py-3 px-4 text-slate-400">— Not Included</td>
+                      </tr>
+                      <tr className="hover:bg-slate-50/50">
+                        <td className="py-3 px-4 font-bold text-slate-800">Custom Fields Builder</td>
+                        <td className="py-3 px-4 text-emerald-600 font-bold">✓ Dynamic Schema Builder</td>
+                        <td className="py-3 px-4 text-slate-400">— Standard Fields</td>
+                        <td className="py-3 px-4 text-slate-400">— Standard Fields</td>
+                      </tr>
+                      <tr className="hover:bg-slate-50/50">
+                        <td className="py-3 px-4 font-bold text-slate-800">Row-Level Security (RLS) Isolation</td>
+                        <td className="py-3 px-4 text-emerald-600 font-bold">✓ Enforced</td>
+                        <td className="py-3 px-4 text-emerald-600 font-bold">✓ Enforced</td>
+                        <td className="py-3 px-4 text-emerald-600 font-bold">✓ Enforced</td>
+                      </tr>
+                      <tr className="hover:bg-slate-50/50">
+                        <td className="py-3 px-4 font-bold text-slate-800">Priority SLA &amp; Support</td>
+                        <td className="py-3 px-4 text-purple-700 font-bold">24/7 Dedicated Support</td>
+                        <td className="py-3 px-4 text-slate-700 font-semibold">Standard Email Support</td>
+                        <td className="py-3 px-4 text-slate-500">Community Support</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
@@ -1046,6 +1310,35 @@ function AdminPortalContent() {
                 </div>
               </div>
 
+              {/* Active Filter Indicator */}
+              {(userRoleFilter !== "ALL" || userSearchQuery) && (
+                <div className="px-4 py-2.5 rounded-2xl bg-white border border-[#0c3843]/20 shadow-xs flex items-center justify-between text-xs text-slate-800 animate-in fade-in">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#0c3843] animate-pulse" />
+                    <span>
+                      Filtered view: {userRoleFilter !== "ALL" && (
+                        <span className="font-extrabold uppercase text-[#0c3843] bg-[#0c3843]/10 px-2 py-0.5 rounded-md mr-1.5 border border-[#0c3843]/20">
+                          {userRoleFilter} Role
+                        </span>
+                      )}
+                      {userSearchQuery && (
+                        <span className="text-slate-600">Keyword: &quot;{userSearchQuery}&quot;</span>
+                      )}
+                      <span className="text-slate-500 font-semibold ml-1">({filteredUsers.length} matching store accounts found)</span>
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setUserRoleFilter("ALL");
+                      setUserSearchQuery("");
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition-colors"
+                  >
+                    Reset Filters ✕
+                  </button>
+                </div>
+              )}
+
               {/* Users Table */}
               <div className="rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
                 <div className="overflow-x-auto">
@@ -1076,7 +1369,14 @@ function AdminPortalContent() {
                               <div className="text-[11px] font-mono text-slate-500 mt-0.5">{u.email}</div>
                             </td>
                             <td className="py-4 px-6 text-slate-700 font-semibold">
-                              {u.org_name}
+                              <button
+                                onClick={() => handleTabChange("clients", undefined, u.org_name)}
+                                className="font-semibold text-slate-800 hover:text-[#0c3843] hover:underline cursor-pointer flex items-center gap-1 group text-left"
+                                title="View this client in directory"
+                              >
+                                <span>{u.org_name}</span>
+                                <ChevronRight className="w-3 h-3 text-slate-300 group-hover:text-[#0c3843] group-hover:translate-x-0.5 transition-all" />
+                              </button>
                             </td>
                             <td className="py-4 px-6 text-center">
                               <span
@@ -1130,13 +1430,16 @@ function AdminPortalContent() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-5 rounded-2xl border border-emerald-200 bg-white shadow-xs space-y-3">
+                <div className="p-5 rounded-2xl border border-emerald-200 bg-white shadow-xs space-y-3 hover:-translate-y-1.5 hover:shadow-xl hover:border-emerald-400 transition-all duration-300 group cursor-default">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                      <Database className="w-4 h-4 text-emerald-600" />
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-200 group-hover:scale-110 transition-transform">
+                        <Database className="w-4 h-4 text-emerald-600" />
+                      </div>
                       PostgreSQL 18 Multi-Tenant Engine
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                       HEALTHY
                     </span>
                   </div>
@@ -1145,13 +1448,16 @@ function AdminPortalContent() {
                   </p>
                 </div>
 
-                <div className="p-5 rounded-2xl border border-indigo-200 bg-white shadow-xs space-y-3">
+                <div className="p-5 rounded-2xl border border-indigo-200 bg-white shadow-xs space-y-3 hover:-translate-y-1.5 hover:shadow-xl hover:border-indigo-400 transition-all duration-300 group cursor-default">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                      <Cpu className="w-4 h-4 text-indigo-600" />
+                      <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-200 group-hover:scale-110 transition-transform">
+                        <Cpu className="w-4 h-4 text-indigo-600" />
+                      </div>
                       Valkey 8.0 In-Memory Cache
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold">
+                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
                       CONNECTED
                     </span>
                   </div>
@@ -1160,13 +1466,16 @@ function AdminPortalContent() {
                   </p>
                 </div>
 
-                <div className="p-5 rounded-2xl border border-blue-200 bg-white shadow-xs space-y-3">
+                <div className="p-5 rounded-2xl border border-blue-200 bg-white shadow-xs space-y-3 hover:-translate-y-1.5 hover:shadow-xl hover:border-blue-400 transition-all duration-300 group cursor-default">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                      <HardDrive className="w-4 h-4 text-blue-600" />
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200 group-hover:scale-110 transition-transform">
+                        <HardDrive className="w-4 h-4 text-blue-600" />
+                      </div>
                       SeaweedFS Object Storage
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold">
+                    <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                       READY
                     </span>
                   </div>
@@ -1175,13 +1484,16 @@ function AdminPortalContent() {
                   </p>
                 </div>
 
-                <div className="p-5 rounded-2xl border border-purple-200 bg-white shadow-xs space-y-3">
+                <div className="p-5 rounded-2xl border border-purple-200 bg-white shadow-xs space-y-3 hover:-translate-y-1.5 hover:shadow-xl hover:border-purple-400 transition-all duration-300 group cursor-default">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-purple-600" />
+                      <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-200 group-hover:scale-110 transition-transform">
+                        <Mail className="w-4 h-4 text-purple-600" />
+                      </div>
                       Mailpit SMTP Server
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold">
+                    <span className="px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
                       READY
                     </span>
                   </div>
@@ -1227,15 +1539,75 @@ function AdminPortalContent() {
           {/* ==================================================== */}
           {activeTab === "audit" && (
             <div className="space-y-6">
-              <div className="border-b border-slate-200/80 pb-4">
-                <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-[#0c3843]" />
-                  <span>Platform Security &amp; Audit Trail</span>
-                </h2>
-                <p className="text-xs text-slate-500 mt-1">
-                  Cryptographic log trail of administrative actions, software provisioning, and security events ({auditLogs.length} events).
-                </p>
+              <div className="border-b border-slate-200/80 pb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-[#0c3843]" />
+                    <span>Platform Security &amp; Audit Trail</span>
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Cryptographic log trail of administrative actions, software provisioning, and security events ({filteredAuditLogs.length} events).
+                  </p>
+                </div>
               </div>
+
+              {/* Audit Search & Filter Bar */}
+              <div className="p-4 rounded-2xl border border-slate-200/80 bg-white shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
+                <div className="relative w-full md:w-96">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by action, actor email, company, or ID..."
+                    value={auditSearchQuery}
+                    onChange={(e) => setAuditSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2.5 rounded-xl text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#0c3843]/20 focus:border-[#0c3843] text-slate-900 placeholder:text-slate-400 transition-all"
+                  />
+                </div>
+
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                  <span className="text-xs text-slate-500 shrink-0 font-medium">Action Filter:</span>
+                  <select
+                    value={auditActionFilter}
+                    onChange={(e) => setAuditActionFilter(e.target.value)}
+                    className="px-3 py-2 rounded-xl text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#0c3843]/20 focus:border-[#0c3843] text-slate-900 cursor-pointer font-medium"
+                  >
+                    <option value="ALL">All Actions</option>
+                    <option value="PROVISION">Provisioning</option>
+                    <option value="UPDATE_PLAN">Plan Updates</option>
+                    <option value="LOGIN">Auth &amp; Login</option>
+                    <option value="RECONCILIATION">Reconciliation</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Active Filter Indicator */}
+              {(auditActionFilter !== "ALL" || auditSearchQuery) && (
+                <div className="px-4 py-2.5 rounded-2xl bg-white border border-[#0c3843]/20 shadow-xs flex items-center justify-between text-xs text-slate-800 animate-in fade-in">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#0c3843] animate-pulse" />
+                    <span>
+                      Filtered view: {auditActionFilter !== "ALL" && (
+                        <span className="font-extrabold uppercase text-[#0c3843] bg-[#0c3843]/10 px-2 py-0.5 rounded-md mr-1.5 border border-[#0c3843]/20">
+                          {auditActionFilter} Action
+                        </span>
+                      )}
+                      {auditSearchQuery && (
+                        <span className="text-slate-600">Keyword: &quot;{auditSearchQuery}&quot;</span>
+                      )}
+                      <span className="text-slate-500 font-semibold ml-1">({filteredAuditLogs.length} matching events found)</span>
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setAuditActionFilter("ALL");
+                      setAuditSearchQuery("");
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition-colors"
+                  >
+                    Reset Filters ✕
+                  </button>
+                </div>
+              )}
 
               {/* Audit Table */}
               <div className="rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
@@ -1252,15 +1624,15 @@ function AdminPortalContent() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700">
-                      {auditLogs.length === 0 ? (
+                      {filteredAuditLogs.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="py-12 text-center text-slate-400">
                             <FileText className="w-8 h-8 mx-auto mb-2 text-slate-300 stroke-1" />
-                            <p className="font-semibold text-slate-500">No audit events recorded yet.</p>
+                            <p className="font-semibold text-slate-500">No matching audit events recorded.</p>
                           </td>
                         </tr>
                       ) : (
-                        auditLogs.map((ev) => (
+                        filteredAuditLogs.map((ev) => (
                           <tr key={ev.audit_id} className="hover:bg-slate-50/70 transition-colors">
                             <td className="py-4 px-6 text-slate-500 font-mono text-[11px]">
                               {new Date(ev.created_at).toLocaleString()}
@@ -1277,7 +1649,13 @@ function AdminPortalContent() {
                               </div>
                             </td>
                             <td className="py-4 px-6 text-slate-800 font-semibold">
-                              {ev.org_name}
+                              <button
+                                onClick={() => handleTabChange("clients", undefined, ev.org_name)}
+                                className="font-semibold text-slate-800 hover:text-[#0c3843] hover:underline cursor-pointer"
+                                title="View client"
+                              >
+                                {ev.org_name}
+                              </button>
                             </td>
                             <td className="py-4 px-6 font-mono text-[11px] text-slate-500">
                               {ev.user_email}
