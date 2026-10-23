@@ -21,9 +21,9 @@ function AppShellInner({ children }: AppShellProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
-  // 1. Login Page: Full screen
+  // 1. Login Page: Full screen fixed (non-scrollable)
   if (pathname === "/login") {
-    return <main className="h-full w-full overflow-y-auto">{children}</main>;
+    return <main className="h-full w-full overflow-hidden">{children}</main>;
   }
 
   // 2. Dashboard 1: Admin Portal (Standalone complete Executive Dashboard with its own sidebar)
