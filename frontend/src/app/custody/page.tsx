@@ -434,15 +434,15 @@ function CustodyContent() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full min-w-[850px] text-left text-xs">
             <thead className="bg-slate-50/75 dark:bg-slate-900 text-slate-500 border-b border-slate-200/80 dark:border-slate-800">
               <tr>
-                <th className="py-3 px-5 font-semibold">Asset / Tool</th>
-                <th className="py-3 px-5 font-semibold">Custodian (Staff)</th>
-                <th className="py-3 px-5 font-semibold">Checkout Date</th>
-                <th className="py-3 px-5 font-semibold">Expected Return</th>
-                <th className="py-3 px-5 font-semibold text-center">Grade</th>
-                <th className="py-3 px-5 font-semibold text-right">Actions</th>
+                <th className="py-3 px-5 font-semibold min-w-[200px]">Asset / Tool</th>
+                <th className="py-3 px-5 font-semibold min-w-[180px]">Custodian (Staff)</th>
+                <th className="py-3 px-5 font-semibold min-w-[120px]">Checkout Date</th>
+                <th className="py-3 px-5 font-semibold min-w-[120px]">Expected Return</th>
+                <th className="py-3 px-5 font-semibold text-center min-w-[90px]">Grade</th>
+                <th className="py-3 px-5 font-semibold text-right min-w-[120px] whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">

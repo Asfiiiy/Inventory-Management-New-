@@ -249,6 +249,13 @@ func (s *Service) ProvisionOrganization(ctx context.Context, in ProvisionInput) 
 		return nil, fmt.Errorf("failed to insert admin user: %w", err)
 	}
 
+	// 5. Record Initial Provisioning Audit Event
+	auditID := uuid.New()
+	_, _ = tx.Exec(ctx, `
+		INSERT INTO audit_log (audit_id, org_id, user_id, action, entity_type, entity_id, ip_address, created_at)
+		VALUES ($1, $2, $3, 'SOFTWARE_PROVISIONED', 'organization', $4, '127.0.0.1', $5)
+	`, auditID, orgID, userID, orgID.String(), now)
+
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit provisioning: %w", err)
 	}
@@ -274,8 +281,17 @@ func (s *Service) UpdateOrganization(ctx context.Context, orgID uuid.UUID, name,
 		    plan = COALESCE(NULLIF($3, ''), plan)
 		WHERE org_id = $1
 	`, orgID, name, plan)
+	if err != nil {
+		return err
+	}
 
-	return err
+	auditID := uuid.New()
+	_, _ = pool.Exec(ctx, `
+		INSERT INTO audit_log (audit_id, org_id, action, entity_type, entity_id, ip_address, created_at)
+		VALUES ($1, $2, 'PLAN_UPDATED', 'organization', $3, '127.0.0.1', NOW())
+	`, auditID, orgID, plan)
+
+	return nil
 }
 
 type GlobalUser struct {

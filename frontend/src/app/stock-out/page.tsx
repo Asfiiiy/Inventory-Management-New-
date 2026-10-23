@@ -337,16 +337,16 @@ function StockOutContent() {
           </h2>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full min-w-[760px] text-left text-xs">
               <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-500 uppercase font-semibold text-[11px]">
                 <tr>
-                  <th className="px-4 py-2.5">Reference</th>
-                  <th className="px-4 py-2.5">Product</th>
-                  <th className="px-4 py-2.5">Customer</th>
-                  <th className="px-4 py-2.5 text-center">Qty Out</th>
-                  <th className="px-4 py-2.5 text-center">Move Type</th>
-                  <th className="px-4 py-2.5 text-right">Time</th>
-                  <th className="px-4 py-2.5 text-right">Invoice</th>
+                  <th className="px-4 py-2.5 min-w-[130px]">Reference</th>
+                  <th className="px-4 py-2.5 min-w-[180px]">Product</th>
+                  <th className="px-4 py-2.5 min-w-[120px]">Customer</th>
+                  <th className="px-4 py-2.5 text-center min-w-[80px]">Qty Out</th>
+                  <th className="px-4 py-2.5 text-center min-w-[100px]">Move Type</th>
+                  <th className="px-4 py-2.5 text-right min-w-[90px]">Time</th>
+                  <th className="px-4 py-2.5 text-right min-w-[70px] whitespace-nowrap">Invoice</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">

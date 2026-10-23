@@ -283,15 +283,15 @@ function StockAdjustmentsContent() {
           </h2>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full min-w-[700px] text-left text-xs">
               <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-500 uppercase font-semibold text-[11px]">
                 <tr>
-                  <th className="px-4 py-2.5">Reference</th>
-                  <th className="px-4 py-2.5">Product</th>
-                  <th className="px-4 py-2.5">Reason</th>
-                  <th className="px-4 py-2.5 text-center">Move Delta</th>
-                  <th className="px-4 py-2.5 text-center">Move Type</th>
-                  <th className="px-4 py-2.5 text-right">Time</th>
+                  <th className="px-4 py-2.5 min-w-[130px]">Reference</th>
+                  <th className="px-4 py-2.5 min-w-[180px]">Product</th>
+                  <th className="px-4 py-2.5 min-w-[140px]">Reason</th>
+                  <th className="px-4 py-2.5 text-center min-w-[90px]">Move Delta</th>
+                  <th className="px-4 py-2.5 text-center min-w-[100px]">Move Type</th>
+                  <th className="px-4 py-2.5 text-right min-w-[80px] whitespace-nowrap">Time</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">

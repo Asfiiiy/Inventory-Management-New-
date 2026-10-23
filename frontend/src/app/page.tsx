@@ -493,15 +493,15 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full min-w-[720px] text-left text-xs">
                   <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-500 uppercase font-semibold text-[11px]">
                     <tr>
-                      <th className="px-4 py-2.5">Item / SKU</th>
-                      <th className="px-4 py-2.5 text-center">Alert State</th>
-                      <th className="px-4 py-2.5 text-center">On-Hand</th>
-                      <th className="px-4 py-2.5 text-center">Buffer / Reorder</th>
-                      <th className="px-4 py-2.5 text-center">Suggested PO</th>
-                      <th className="px-4 py-2.5 text-right">Action</th>
+                      <th className="px-4 py-2.5 min-w-[200px]">Item / SKU</th>
+                      <th className="px-4 py-2.5 text-center min-w-[100px]">Alert State</th>
+                      <th className="px-4 py-2.5 text-center min-w-[80px]">On-Hand</th>
+                      <th className="px-4 py-2.5 text-center min-w-[110px]">Buffer / Reorder</th>
+                      <th className="px-4 py-2.5 text-center min-w-[100px]">Suggested PO</th>
+                      <th className="px-4 py-2.5 text-right min-w-[100px] whitespace-nowrap">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">

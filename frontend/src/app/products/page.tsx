@@ -305,17 +305,17 @@ function ProductsMasterContent() {
       {/* Products Table */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full min-w-[900px] text-left text-xs">
             <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-500 uppercase font-semibold text-[11px]">
               <tr>
-                <th className="px-5 py-3">SKU</th>
-                <th className="px-5 py-3">Product Name</th>
-                <th className="px-5 py-3">Category</th>
-                <th className="px-5 py-3 text-right">Cost Price</th>
-                <th className="px-5 py-3 text-right">Selling Price</th>
-                <th className="px-5 py-3 text-center">Current Stock</th>
-                <th className="px-5 py-3 text-center">Reorder Level</th>
-                <th className="px-5 py-3 text-right">Actions</th>
+                <th className="px-5 py-3 min-w-[120px]">SKU</th>
+                <th className="px-5 py-3 min-w-[200px]">Product Name</th>
+                <th className="px-5 py-3 min-w-[120px]">Category</th>
+                <th className="px-5 py-3 text-right min-w-[90px]">Cost Price</th>
+                <th className="px-5 py-3 text-right min-w-[90px]">Selling Price</th>
+                <th className="px-5 py-3 text-center min-w-[110px]">Current Stock</th>
+                <th className="px-5 py-3 text-center min-w-[100px]">Reorder Level</th>
+                <th className="px-5 py-3 text-right min-w-[130px] whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">

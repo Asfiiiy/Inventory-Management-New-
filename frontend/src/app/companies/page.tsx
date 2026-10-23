@@ -326,17 +326,17 @@ function CompaniesContent() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full min-w-[1100px] text-left text-xs">
             <thead className="bg-slate-50/75 dark:bg-slate-900 text-slate-500 border-b border-slate-200/80 dark:border-slate-800">
               <tr>
-                <th className="py-3 px-6 font-semibold">Company Name</th>
-                <th className="py-3 px-6 font-semibold">Plan</th>
-                <th className="py-3 px-6 font-semibold text-center">Status</th>
-                <th className="py-3 px-6 font-semibold text-center">Staff Count</th>
-                <th className="py-3 px-6 font-semibold text-center">Catalog SKUs</th>
-                <th className="py-3 px-6 font-semibold text-center">Stock Movements</th>
-                <th className="py-3 px-6 font-semibold">Given On</th>
-                <th className="py-3 px-6 font-semibold text-right">Action</th>
+                <th className="py-3 px-6 font-semibold min-w-[220px]">Company Name</th>
+                <th className="py-3 px-6 font-semibold min-w-[110px]">Plan</th>
+                <th className="py-3 px-6 font-semibold text-center min-w-[90px]">Status</th>
+                <th className="py-3 px-6 font-semibold text-center min-w-[90px]">Staff Count</th>
+                <th className="py-3 px-6 font-semibold text-center min-w-[90px]">Catalog SKUs</th>
+                <th className="py-3 px-6 font-semibold text-center min-w-[100px]">Stock Movements</th>
+                <th className="py-3 px-6 font-semibold min-w-[110px]">Given On</th>
+                <th className="py-3 px-6 font-semibold text-right min-w-[140px] whitespace-nowrap">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">

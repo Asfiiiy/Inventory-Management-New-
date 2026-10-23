@@ -926,17 +926,17 @@ function AdminPortalContent() {
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+                  <table className="w-full min-w-[1200px] text-left text-xs">
                     <thead className="bg-slate-50/90 text-slate-600 border-b border-slate-200">
                       <tr>
-                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px]">Client Company</th>
-                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px]">License Tier</th>
-                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] text-center">Status</th>
-                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] text-center">Staff Count</th>
-                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] text-center">Store SKUs</th>
-                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] text-center">Ledger Moves</th>
-                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px]">Given On</th>
-                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] text-right">Action</th>
+                        <th className="py-3.5 px-5 font-bold uppercase tracking-wider text-[11px] w-[260px] min-w-[240px]">Client Company</th>
+                        <th className="py-3.5 px-4 font-bold uppercase tracking-wider text-[11px] w-[130px] min-w-[120px]">License Tier</th>
+                        <th className="py-3.5 px-4 font-bold uppercase tracking-wider text-[11px] text-center w-[110px] min-w-[100px]">Status</th>
+                        <th className="py-3.5 px-4 font-bold uppercase tracking-wider text-[11px] text-center w-[100px] min-w-[90px]">Staff Count</th>
+                        <th className="py-3.5 px-4 font-bold uppercase tracking-wider text-[11px] text-center w-[100px] min-w-[90px]">Store SKUs</th>
+                        <th className="py-3.5 px-4 font-bold uppercase tracking-wider text-[11px] text-center w-[110px] min-w-[100px]">Ledger Moves</th>
+                        <th className="py-3.5 px-4 font-bold uppercase tracking-wider text-[11px] w-[110px] min-w-[100px]">Given On</th>
+                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] text-right w-[280px] min-w-[260px] whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -952,7 +952,7 @@ function AdminPortalContent() {
                       ) : (
                         filteredClients.map((c) => (
                           <tr key={c.org_id} className="hover:bg-slate-50/70 transition-colors">
-                            <td className="py-4 px-6">
+                            <td className="py-4 px-5">
                               <div className="font-bold text-slate-900 flex items-center gap-2">
                                 <span>{c.name}</span>
                               </div>
@@ -963,7 +963,7 @@ function AdminPortalContent() {
                               </div>
                             </td>
 
-                            <td className="py-4 px-6">
+                            <td className="py-4 px-4">
                               <span
                                 className={cn(
                                   "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
@@ -978,34 +978,34 @@ function AdminPortalContent() {
                               </span>
                             </td>
 
-                            <td className="py-4 px-6 text-center">
+                            <td className="py-4 px-4 text-center">
                               <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                 <span>Active</span>
                               </span>
                             </td>
 
-                            <td className="py-4 px-6 text-center font-mono font-semibold text-slate-800">
+                            <td className="py-4 px-4 text-center font-mono font-semibold text-slate-800">
                               {c.user_count}
                             </td>
 
-                            <td className="py-4 px-6 text-center font-mono font-semibold text-slate-800">
+                            <td className="py-4 px-4 text-center font-mono font-semibold text-slate-800">
                               {c.item_count}
                             </td>
 
-                            <td className="py-4 px-6 text-center font-mono font-medium text-slate-500">
+                            <td className="py-4 px-4 text-center font-mono font-medium text-slate-500">
                               {c.movement_count}
                             </td>
 
-                            <td className="py-4 px-6 text-slate-500 text-[11px]">
+                            <td className="py-4 px-4 text-slate-500 text-[11px] whitespace-nowrap">
                               {new Date(c.created_at).toLocaleDateString()}
                             </td>
 
-                            <td className="py-4 px-6 text-right">
-                              <div className="flex items-center justify-end gap-2">
+                            <td className="py-4 px-6 text-right whitespace-nowrap">
+                              <div className="flex items-center justify-end gap-2 shrink-0">
                                 <button
                                   onClick={() => openClientModal(c, "details")}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-all cursor-pointer border border-slate-200"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-all cursor-pointer border border-slate-200 shrink-0 whitespace-nowrap"
                                   title="Manage this client's license & details"
                                 >
                                   <Sliders className="w-3.5 h-3.5 text-[#0c3843]" />
@@ -1013,11 +1013,11 @@ function AdminPortalContent() {
                                 </button>
                                 <button
                                   onClick={() => openClientModal(c, "activity")}
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-[#0c3843]/10 hover:bg-[#0c3843]/20 text-[#0c3843] border border-[#0c3843]/20 transition-all cursor-pointer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#0c3843]/10 hover:bg-[#0c3843]/20 text-[#0c3843] border border-[#0c3843]/20 transition-all cursor-pointer shrink-0 whitespace-nowrap shadow-2xs"
                                   title="View operational activity logs for this client"
                                 >
-                                  <Activity className="w-3.5 h-3.5" />
-                                  <span className="hidden xl:inline">Activity Logs</span>
+                                  <Activity className="w-3.5 h-3.5 text-[#0c3843]" />
+                                  <span>Activity Logs</span>
                                 </button>
                               </div>
                             </td>
@@ -1199,13 +1199,13 @@ function AdminPortalContent() {
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+                  <table className="w-full min-w-[760px] text-left text-xs">
                     <thead className="bg-slate-50/90 text-slate-700 border-b border-slate-200">
                       <tr>
-                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px]">Feature / Entitlement</th>
-                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px] text-purple-700">Enterprise</th>
-                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px] text-blue-700">Standard</th>
-                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px] text-amber-700">30-Day Trial</th>
+                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px] min-w-[260px]">Feature / Entitlement</th>
+                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px] text-purple-700 min-w-[160px]">Enterprise</th>
+                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px] text-blue-700 min-w-[160px]">Standard</th>
+                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px] text-amber-700 min-w-[160px]">30-Day Trial</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-600">
@@ -1342,15 +1342,15 @@ function AdminPortalContent() {
               {/* Users Table */}
               <div className="rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+                  <table className="w-full min-w-[950px] text-left text-xs">
                     <thead className="bg-slate-50/90 text-slate-600 border-b border-slate-200">
                       <tr>
-                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px]">User Account</th>
-                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px]">Client Company</th>
-                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] text-center">Assigned Role</th>
-                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] text-center">Status</th>
-                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px]">Created Date</th>
-                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] text-right">Security</th>
+                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] min-w-[220px]">User Account</th>
+                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] min-w-[200px]">Client Company</th>
+                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] text-center min-w-[120px]">Assigned Role</th>
+                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] text-center min-w-[100px]">Status</th>
+                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] min-w-[120px]">Created Date</th>
+                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] text-right min-w-[140px] whitespace-nowrap">Security</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -1612,15 +1612,15 @@ function AdminPortalContent() {
               {/* Audit Table */}
               <div className="rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+                  <table className="w-full min-w-[1050px] text-left text-xs">
                     <thead className="bg-slate-50/90 text-slate-600 border-b border-slate-200">
                       <tr>
-                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px]">Timestamp</th>
-                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px]">Action / Event</th>
-                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px]">Entity Type &amp; ID</th>
-                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px]">Client Company</th>
-                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px]">Actor / User</th>
-                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] text-right">IP Address</th>
+                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] min-w-[160px] whitespace-nowrap">Timestamp</th>
+                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] min-w-[150px] whitespace-nowrap">Action / Event</th>
+                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] min-w-[180px]">Entity Type &amp; ID</th>
+                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] min-w-[180px]">Client Company</th>
+                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] min-w-[180px]">Actor / User</th>
+                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] text-right min-w-[120px] whitespace-nowrap">IP Address</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -1928,7 +1928,7 @@ function AdminPortalContent() {
       {/* ======================================================== */}
       {selectedClient && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-full max-w-2xl rounded-3xl bg-white border border-slate-200 shadow-2xl p-6 md:p-8 space-y-6 max-h-[90vh] overflow-y-auto text-slate-900">
+          <div className="w-full max-w-3xl rounded-3xl bg-white border border-slate-200 shadow-2xl p-6 md:p-8 space-y-6 max-h-[90vh] overflow-y-auto text-slate-900">
             <div className="flex items-start justify-between">
               <div>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#0c3843]/10 text-[#0c3843] border border-[#0c3843]/20">
@@ -2044,41 +2044,73 @@ function AdminPortalContent() {
             {/* Modal Tab: Activity Logs */}
             {modalTab === "activity" && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between text-xs text-slate-500">
-                  <span>Operational audit events for {selectedClient.name}:</span>
-                  <span className="font-mono text-[11px] font-bold text-slate-700">{clientActivity.length} Events Logged</span>
+                <div className="flex items-center justify-between text-xs text-slate-500 pb-1 border-b border-slate-100">
+                  <span className="font-semibold text-slate-700">Audit trail &amp; operational history for {selectedClient.name}:</span>
+                  <span className="font-mono text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-800 border border-slate-200">
+                    {clientActivity.length} Events Logged
+                  </span>
                 </div>
 
                 {isLoadingActivity ? (
-                  <div className="py-12 text-center text-xs text-slate-400">
-                    Loading activity trail...
+                  <div className="py-14 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
+                    <RefreshCw className="w-5 h-5 animate-spin text-[#0c3843]" />
+                    <span>Loading operational activity trail...</span>
                   </div>
                 ) : clientActivity.length === 0 ? (
-                  <div className="py-12 text-center text-slate-400 border border-slate-200 rounded-2xl bg-slate-50">
-                    <Activity className="w-8 h-8 mx-auto mb-2 text-slate-300 stroke-1" />
-                    <p className="font-medium text-slate-500 text-xs">No recent events recorded for this workspace.</p>
+                  <div className="py-12 text-center text-slate-400 border border-slate-200 rounded-2xl bg-slate-50 space-y-2">
+                    <Activity className="w-9 h-9 mx-auto text-slate-300 stroke-1" />
+                    <p className="font-semibold text-slate-700 text-xs">No recent events recorded for this workspace.</p>
+                    <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
+                      Administrative changes, software license upgrades, and operational logins for this client will be automatically logged here.
+                    </p>
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-slate-200 bg-white divide-y divide-slate-100 max-h-64 overflow-y-auto">
-                    {clientActivity.map((ev) => (
-                      <div key={ev.audit_id} className="p-3.5 flex items-center justify-between text-xs hover:bg-slate-50/70 transition-colors">
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#0c3843]/10 text-[#0c3843] border border-[#0c3843]/20">
-                              {ev.action}
-                            </span>
-                            <span className="font-bold text-slate-900 capitalize">{ev.entity_type}</span>
+                  <div className="rounded-2xl border border-slate-200 bg-white divide-y divide-slate-100 max-h-[380px] overflow-y-auto">
+                    {clientActivity.map((ev) => {
+                      const isProvision = ev.action.includes("PROVISION");
+                      const isPlan = ev.action.includes("PLAN");
+                      const isLogin = ev.action.includes("LOGIN") || ev.action.includes("AUTH");
+
+                      return (
+                        <div key={ev.audit_id} className="p-4 flex items-start justify-between gap-4 text-xs hover:bg-slate-50/70 transition-colors">
+                          <div className="space-y-1.5 flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span
+                                className={cn(
+                                  "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border whitespace-nowrap",
+                                  isProvision
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : isPlan
+                                    ? "bg-purple-50 text-purple-700 border-purple-200"
+                                    : isLogin
+                                    ? "bg-blue-50 text-blue-700 border-blue-200"
+                                    : "bg-[#0c3843]/10 text-[#0c3843] border-[#0c3843]/20"
+                                )}
+                              >
+                                {ev.action}
+                              </span>
+                              <span className="font-bold text-slate-900 capitalize text-xs">
+                                {ev.entity_type}
+                              </span>
+                              {ev.entity_id && (
+                                <span className="font-mono text-[10px] text-slate-400 truncate max-w-[200px]" title={ev.entity_id}>
+                                  (ID: {ev.entity_id})
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-slate-500 flex items-center gap-2 flex-wrap font-mono">
+                              <span className="text-slate-700 font-medium">Actor: {ev.user_email}</span>
+                              <span>&bull;</span>
+                              <span className="text-slate-400">IP: {ev.ip_address}</span>
+                            </div>
                           </div>
-                          <p className="text-[10px] text-slate-500 font-mono">
-                            Actor: {ev.user_email} &bull; ID: {ev.entity_id}
-                          </p>
+                          <div className="text-right text-[11px] font-mono text-slate-500 shrink-0">
+                            <div className="font-semibold text-slate-700">{new Date(ev.created_at).toLocaleDateString()}</div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">{new Date(ev.created_at).toLocaleTimeString()}</div>
+                          </div>
                         </div>
-                        <div className="text-right text-[11px] font-mono text-slate-500">
-                          <div>{new Date(ev.created_at).toLocaleDateString()}</div>
-                          <div className="text-[10px] text-slate-400">{new Date(ev.created_at).toLocaleTimeString()}</div>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
