@@ -926,17 +926,17 @@ function AdminPortalContent() {
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[1200px] text-left text-xs">
+                  <table className="w-full min-w-[840px] text-left text-xs">
                     <thead className="bg-slate-50/90 text-slate-600 border-b border-slate-200">
                       <tr>
-                        <th className="py-3.5 px-5 font-bold uppercase tracking-wider text-[11px] w-[260px] min-w-[240px]">Client Company</th>
-                        <th className="py-3.5 px-4 font-bold uppercase tracking-wider text-[11px] w-[130px] min-w-[120px]">License Tier</th>
-                        <th className="py-3.5 px-4 font-bold uppercase tracking-wider text-[11px] text-center w-[110px] min-w-[100px]">Status</th>
-                        <th className="py-3.5 px-4 font-bold uppercase tracking-wider text-[11px] text-center w-[100px] min-w-[90px]">Staff Count</th>
-                        <th className="py-3.5 px-4 font-bold uppercase tracking-wider text-[11px] text-center w-[100px] min-w-[90px]">Store SKUs</th>
-                        <th className="py-3.5 px-4 font-bold uppercase tracking-wider text-[11px] text-center w-[110px] min-w-[100px]">Ledger Moves</th>
-                        <th className="py-3.5 px-4 font-bold uppercase tracking-wider text-[11px] w-[110px] min-w-[100px]">Given On</th>
-                        <th className="py-3.5 px-6 font-bold uppercase tracking-wider text-[11px] text-right w-[280px] min-w-[260px] whitespace-nowrap">Actions</th>
+                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px] min-w-[170px]">Client Company</th>
+                        <th className="py-3 px-2 font-bold uppercase tracking-wider text-[11px] text-center min-w-[85px]">License Tier</th>
+                        <th className="py-3 px-2 font-bold uppercase tracking-wider text-[11px] text-center min-w-[80px]">Status</th>
+                        <th className="py-3 px-2 font-bold uppercase tracking-wider text-[11px] text-center min-w-[55px]">Staff</th>
+                        <th className="py-3 px-2 font-bold uppercase tracking-wider text-[11px] text-center min-w-[55px]">SKUs</th>
+                        <th className="py-3 px-2 font-bold uppercase tracking-wider text-[11px] text-center min-w-[55px]">Moves</th>
+                        <th className="py-3 px-2 font-bold uppercase tracking-wider text-[11px] text-center min-w-[85px]">Given On</th>
+                        <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px] text-right min-w-[210px] whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -952,7 +952,7 @@ function AdminPortalContent() {
                       ) : (
                         filteredClients.map((c) => (
                           <tr key={c.org_id} className="hover:bg-slate-50/70 transition-colors">
-                            <td className="py-4 px-5">
+                            <td className="py-3.5 px-4">
                               <div className="font-bold text-slate-900 flex items-center gap-2">
                                 <span>{c.name}</span>
                               </div>
@@ -963,10 +963,10 @@ function AdminPortalContent() {
                               </div>
                             </td>
 
-                            <td className="py-4 px-4">
+                            <td className="py-3.5 px-2 text-center">
                               <span
                                 className={cn(
-                                  "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
+                                  "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border",
                                   c.plan.toLowerCase() === "enterprise"
                                     ? "bg-purple-50 text-purple-700 border-purple-200"
                                     : c.plan.toLowerCase() === "standard"
@@ -978,45 +978,45 @@ function AdminPortalContent() {
                               </span>
                             </td>
 
-                            <td className="py-4 px-4 text-center">
+                            <td className="py-3.5 px-2 text-center">
                               <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                 <span>Active</span>
                               </span>
                             </td>
 
-                            <td className="py-4 px-4 text-center font-mono font-semibold text-slate-800">
+                            <td className="py-3.5 px-2 text-center font-mono font-semibold text-slate-800">
                               {c.user_count}
                             </td>
 
-                            <td className="py-4 px-4 text-center font-mono font-semibold text-slate-800">
+                            <td className="py-3.5 px-2 text-center font-mono font-semibold text-slate-800">
                               {c.item_count}
                             </td>
 
-                            <td className="py-4 px-4 text-center font-mono font-medium text-slate-500">
+                            <td className="py-3.5 px-2 text-center font-mono font-medium text-slate-500">
                               {c.movement_count}
                             </td>
 
-                            <td className="py-4 px-4 text-slate-500 text-[11px] whitespace-nowrap">
+                            <td className="py-3.5 px-2 text-center text-slate-500 text-[11px] whitespace-nowrap">
                               {new Date(c.created_at).toLocaleDateString()}
                             </td>
 
-                            <td className="py-4 px-6 text-right whitespace-nowrap">
-                              <div className="flex items-center justify-end gap-2 shrink-0">
+                            <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                              <div className="flex items-center justify-end gap-1.5 shrink-0">
                                 <button
                                   onClick={() => openClientModal(c, "details")}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-all cursor-pointer border border-slate-200 shrink-0 whitespace-nowrap"
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-all cursor-pointer border border-slate-200 shrink-0 whitespace-nowrap"
                                   title="Manage this client's license & details"
                                 >
                                   <Sliders className="w-3.5 h-3.5 text-[#0c3843]" />
-                                  <span>Manage Client</span>
+                                  <span>Manage</span>
                                 </button>
                                 <button
                                   onClick={() => openClientModal(c, "activity")}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#0c3843]/10 hover:bg-[#0c3843]/20 text-[#0c3843] border border-[#0c3843]/20 transition-all cursor-pointer shrink-0 whitespace-nowrap shadow-2xs"
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-[#0c3843] hover:bg-[#08262e] text-white transition-all cursor-pointer shrink-0 whitespace-nowrap shadow-xs"
                                   title="View operational activity logs for this client"
                                 >
-                                  <Activity className="w-3.5 h-3.5 text-[#0c3843]" />
+                                  <Activity className="w-3.5 h-3.5 text-white" />
                                   <span>Activity Logs</span>
                                 </button>
                               </div>
