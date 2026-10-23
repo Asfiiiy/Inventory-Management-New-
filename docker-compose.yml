@@ -10,7 +10,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - whoopit_pgdata:/var/lib/postgresql/data
+      - whoopit_pgdata:/var/lib/postgresql
       - ./backend/db/init-extensions.sql:/docker-entrypoint-initdb.d/00_init_extensions.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U whoopit_admin -d whoopit_inventory_v4"]
