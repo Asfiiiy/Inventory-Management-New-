@@ -386,8 +386,43 @@ export const apiClient = {
         method: "PATCH",
         body: JSON.stringify(body),
       }),
+    listUsers: () =>
+      request<{ success: boolean; data: GlobalUser[]; meta?: { count: number } }>(
+        "/api/v1/superadmin/users"
+      ),
+    listAuditLogs: () =>
+      request<{ success: boolean; data: AuditEvent[]; meta?: { count: number } }>(
+        "/api/v1/superadmin/audit"
+      ),
+    getOrgActivity: (orgId: string) =>
+      request<{ success: boolean; data: AuditEvent[]; meta?: { count: number } }>(
+        `/api/v1/superadmin/organizations/${orgId}/activity`
+      ),
   },
 };
+
+export interface GlobalUser {
+  user_id: string;
+  org_id: string;
+  org_name: string;
+  email: string;
+  name: string;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface AuditEvent {
+  audit_id: string;
+  org_id: string;
+  org_name: string;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  user_email: string;
+  created_at: string;
+  ip_address: string;
+}
 
 export interface CustodySummary {
   total_assets: number;
