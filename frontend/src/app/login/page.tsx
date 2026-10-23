@@ -19,13 +19,15 @@ import {
   Crown,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
   const { login, register, isLoading } = useAuth();
 
   const [mode, setMode] = useState<"login" | "register">("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [selectedAccount, setSelectedAccount] = useState<"admin" | "staff" | "custom">("admin");
+  const [email, setEmail] = useState("admin@whoopit.io");
+  const [password, setPassword] = useState("AdminPass123!");
   const [name, setName] = useState("");
   const [orgName, setOrgName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -61,8 +63,9 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickFill = (demoEmail: string, demoPass: string) => {
+  const handleQuickFill = (accountType: "admin" | "staff", demoEmail: string, demoPass: string) => {
     setMode("login");
+    setSelectedAccount(accountType);
     setEmail(demoEmail);
     setPassword(demoPass);
     setErrorMsg(null);
@@ -92,44 +95,78 @@ export default function LoginPage() {
         </div>
 
         {/* Demo Fast-Login Chips */}
-        <div className="bg-slate-900/70 border border-slate-800/80 rounded-2xl p-3.5 backdrop-blur-md space-y-2">
+        <div className="bg-slate-900/70 border border-slate-800/80 rounded-2xl p-3.5 backdrop-blur-md space-y-2.5">
           <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
             <span className="flex items-center gap-1.5 text-slate-300">
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              Quick Demo Accounts:
+              <span>Select Account to Login:</span>
             </span>
-            <span className="text-[10px] text-slate-500">Click to autofill</span>
+            <span className="text-[10px] text-slate-500">1-click switch</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2.5">
             <button
               type="button"
-              onClick={() => handleQuickFill("admin@whoopit.io", "AdminPass123!")}
-              className="flex flex-col items-start p-2.5 rounded-xl bg-indigo-950/40 hover:bg-indigo-900/50 border border-indigo-500/30 hover:border-indigo-500/60 transition-all text-left group"
+              onClick={() => handleQuickFill("admin", "admin@whoopit.io", "AdminPass123!")}
+              className={cn(
+                "flex flex-col items-start p-3 rounded-2xl border transition-all text-left group cursor-pointer relative",
+                selectedAccount === "admin"
+                  ? "bg-indigo-600/20 border-indigo-500 shadow-lg shadow-indigo-600/20 ring-1 ring-indigo-500"
+                  : "bg-slate-900/40 hover:bg-slate-800/60 border-slate-800 text-slate-400"
+              )}
             >
               <div className="flex items-center gap-1.5 w-full justify-between">
-                <span className="text-[11px] font-bold text-indigo-300">1. Admin (Hum)</span>
-                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                <span className="text-[11px] font-bold text-indigo-300 flex items-center gap-1.5">
+                  {selectedAccount === "admin" && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                  )}
+                  1. Admin (Hum)
+                </span>
+                <span
+                  className={cn(
+                    "text-[9px] px-1.5 py-0.5 rounded-full font-semibold border",
+                    selectedAccount === "admin"
+                      ? "bg-indigo-500 text-white border-indigo-400"
+                      : "bg-indigo-500/10 text-indigo-300/80 border-indigo-500/30"
+                  )}
+                >
                   Admin Portal
                 </span>
               </div>
-              <span className="text-[10px] text-slate-400 font-mono mt-1 truncate w-full">
+              <span className="text-[10px] text-slate-400 font-mono mt-1.5 truncate w-full">
                 admin@whoopit.io
               </span>
             </button>
 
             <button
               type="button"
-              onClick={() => handleQuickFill("staff@whoopit.io", "StaffPass123!")}
-              className="flex flex-col items-start p-2.5 rounded-xl bg-slate-800/40 hover:bg-slate-800/80 border border-slate-700/60 hover:border-slate-600 transition-all text-left group"
+              onClick={() => handleQuickFill("staff", "staff@whoopit.io", "StaffPass123!")}
+              className={cn(
+                "flex flex-col items-start p-3 rounded-2xl border transition-all text-left group cursor-pointer relative",
+                selectedAccount === "staff"
+                  ? "bg-amber-600/20 border-amber-500 shadow-lg shadow-amber-600/20 ring-1 ring-amber-500"
+                  : "bg-slate-900/40 hover:bg-slate-800/60 border-slate-800 text-slate-400"
+              )}
             >
               <div className="flex items-center gap-1.5 w-full justify-between">
-                <span className="text-[11px] font-bold text-amber-300">2. Software User</span>
-                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                <span className="text-[11px] font-bold text-amber-300 flex items-center gap-1.5">
+                  {selectedAccount === "staff" && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                  )}
+                  2. Software User
+                </span>
+                <span
+                  className={cn(
+                    "text-[9px] px-1.5 py-0.5 rounded-full font-semibold border",
+                    selectedAccount === "staff"
+                      ? "bg-amber-500 text-slate-950 border-amber-400 font-bold"
+                      : "bg-amber-500/10 text-amber-300/80 border-amber-500/30"
+                  )}
+                >
                   Store Software
                 </span>
               </div>
-              <span className="text-[10px] text-slate-400 font-mono mt-1 truncate w-full">
+              <span className="text-[10px] text-slate-400 font-mono mt-1.5 truncate w-full">
                 staff@whoopit.io
               </span>
             </button>
@@ -224,7 +261,16 @@ export default function LoginPage() {
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (e.target.value === "admin@whoopit.io" || e.target.value === "superadmin@whoopit.com") {
+                      setSelectedAccount("admin");
+                    } else if (e.target.value === "staff@whoopit.io") {
+                      setSelectedAccount("staff");
+                    } else {
+                      setSelectedAccount("custom");
+                    }
+                  }}
                   placeholder="user@example.com"
                   className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-950/60 border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-white placeholder-slate-600 transition-all"
                 />
@@ -266,7 +312,15 @@ export default function LoginPage() {
                 </>
               ) : (
                 <>
-                  <span>{mode === "login" ? "Sign In to Inventory" : "Register Organization & Owner"}</span>
+                  <span>
+                    {mode === "register"
+                      ? "Register Organization & Owner"
+                      : selectedAccount === "admin"
+                      ? "Sign In to Admin Portal →"
+                      : selectedAccount === "staff"
+                      ? "Sign In to Store Software →"
+                      : "Sign In to Inventory →"}
+                  </span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
