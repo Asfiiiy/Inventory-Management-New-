@@ -72,6 +72,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (res.data) {
           setUser(res.data);
           localStorage.setItem("whoopit_auth_user", JSON.stringify(res.data));
+          const role =
+            res.data.role === "admin" || res.data.role === "superadmin" || res.data.email === "admin@whoopit.io"
+              ? "admin"
+              : "staff";
+          localStorage.setItem("whoopit_auth_role", role);
+          document.cookie = `whoopit_auth_role=${encodeURIComponent(role)}; path=/; max-age=604800; SameSite=Lax`;
           if (res.data.org_id) {
             setTenantId(res.data.org_id);
           }
@@ -98,7 +104,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const res = await apiClient.auth.login({ email, password });
         const { token: receivedToken, user: receivedUser } = res.data;
 
-        setAuthToken(receivedToken);
+        const role =
+          receivedUser.role === "admin" || receivedUser.role === "superadmin" || receivedUser.email === "admin@whoopit.io"
+            ? "admin"
+            : "staff";
+
+        setAuthToken(receivedToken, role);
         setTokenState(receivedToken);
         setUser(receivedUser);
         localStorage.setItem("whoopit_auth_user", JSON.stringify(receivedUser));
@@ -109,7 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (targetRedirect) {
           router.push(targetRedirect);
-        } else if (receivedUser.role === "admin" || receivedUser.email === "admin@whoopit.io") {
+        } else if (role === "admin") {
           router.push("/admin");
         } else {
           router.push("/");

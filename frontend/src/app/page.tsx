@@ -61,7 +61,17 @@ export default function DashboardPage() {
     resetToDefaults,
   } = useInventory();
   const { toast } = useToast();
-  const { isAdmin, isSuperAdmin, isStaff } = useAuth();
+  const { isAdmin, isSuperAdmin, isStaff, isLoading: isAuthLoading } = useAuth();
+
+  // If Admin lands on the store software without ?preview=true, redirect to Master Admin Control Room
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isPreview = window.location.search.includes("preview=true");
+      if (!isAuthLoading && (isAdmin || isSuperAdmin) && !isPreview) {
+        window.location.href = "/admin";
+      }
+    }
+  }, [isAdmin, isSuperAdmin, isAuthLoading]);
 
   const [isSeeding, setIsSeeding] = useState(false);
   const [backendAlerts, setBackendAlerts] = useState<StockAlert[]>([]);

@@ -59,7 +59,14 @@ export default function AdminPortalPage() {
 
 function AdminPortalContent() {
   const { toast } = useToast();
-  const { user, logout } = useAuth();
+  const { user, isStaff, isLoading: isAuthLoading, logout } = useAuth();
+
+  // Guard: If regular store staff/user visits /admin, redirect to store software
+  useEffect(() => {
+    if (!isAuthLoading && isStaff && user?.email !== "admin@whoopit.io") {
+      window.location.href = "/";
+    }
+  }, [isAuthLoading, isStaff, user]);
 
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
   const [clients, setClients] = useState<OrganizationSummary[]>([]);
@@ -111,7 +118,7 @@ function AdminPortalContent() {
 
   const handlePreviewStore = (client: OrganizationSummary) => {
     setTenantId(client.org_id);
-    window.open("/", "_blank");
+    window.open("/?preview=true", "_blank");
   };
 
   const fetchAdminData = async () => {
@@ -368,7 +375,7 @@ function AdminPortalContent() {
         <div className="p-3 border-t border-slate-800/80 space-y-2">
           {/* Switch to Software Dashboard (Opens in New Tab) */}
           <a
-            href="/"
+            href="/?preview=true"
             target="_blank"
             rel="noopener noreferrer"
             className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 text-indigo-300 text-xs font-semibold transition-all cursor-pointer"
@@ -439,7 +446,7 @@ function AdminPortalContent() {
             </button>
 
             <a
-              href="/"
+              href="/?preview=true"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/15 hover:bg-indigo-600/25 text-indigo-300 border border-indigo-500/30 text-xs font-semibold transition-all cursor-pointer"

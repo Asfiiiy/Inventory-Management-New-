@@ -43,10 +43,14 @@ export function getTenantId(): string {
   return currentTenantId;
 }
 
-export function setAuthToken(token: string) {
+export function setAuthToken(token: string, role?: string) {
   currentAuthToken = token;
   if (typeof window !== "undefined") {
     localStorage.setItem("whoopit_auth_token", token);
+    if (role) {
+      localStorage.setItem("whoopit_auth_role", role);
+      document.cookie = `whoopit_auth_role=${encodeURIComponent(role)}; path=/; max-age=604800; SameSite=Lax`;
+    }
     // Persist as cookie for Next.js middleware verification
     document.cookie = `whoopit_auth_token=${encodeURIComponent(token)}; path=/; max-age=604800; SameSite=Lax`;
   }
@@ -75,7 +79,9 @@ export function clearAuthToken() {
   if (typeof window !== "undefined") {
     localStorage.removeItem("whoopit_auth_token");
     localStorage.removeItem("whoopit_auth_user");
+    localStorage.removeItem("whoopit_auth_role");
     document.cookie = "whoopit_auth_token=; path=/; max-age=0; SameSite=Lax";
+    document.cookie = "whoopit_auth_role=; path=/; max-age=0; SameSite=Lax";
   }
 }
 
