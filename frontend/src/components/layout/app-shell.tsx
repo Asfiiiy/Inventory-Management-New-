@@ -28,7 +28,7 @@ function AppShellInner({ children }: AppShellProps) {
 
   // 2. Dashboard 1: Admin Portal (Standalone complete Executive Dashboard with its own sidebar)
   if (pathname.startsWith("/admin")) {
-    return <main className="h-screen w-screen overflow-hidden bg-slate-950 text-slate-100">{children}</main>;
+    return <main className="h-screen w-screen overflow-hidden bg-slate-50 text-slate-900">{children}</main>;
   }
 
   // 3. Dashboard 2: Software Dashboard (Client / Shopkeeper store software with store sidebar)
