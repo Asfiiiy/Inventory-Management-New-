@@ -89,3 +89,49 @@ func (h *Handler) UpdateOrganization(w http.ResponseWriter, r *http.Request) {
 		"org_id":  orgID,
 	}, nil)
 }
+
+// ListUsers returns all users registered across client workspaces.
+func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
+	users, err := h.service.ListUsers(r.Context())
+	if err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "Internal Server Error", err.Error(), nil)
+		return
+	}
+
+	platformHttp.RespondJSON(w, http.StatusOK, users, map[string]interface{}{
+		"count": len(users),
+	})
+}
+
+// ListAuditLogs returns global audit trail entries.
+func (h *Handler) ListAuditLogs(w http.ResponseWriter, r *http.Request) {
+	logs, err := h.service.ListAuditLogs(r.Context(), 100)
+	if err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "Internal Server Error", err.Error(), nil)
+		return
+	}
+
+	platformHttp.RespondJSON(w, http.StatusOK, logs, map[string]interface{}{
+		"count": len(logs),
+	})
+}
+
+// GetOrgActivity returns activity and audit logs for a specific organization.
+func (h *Handler) GetOrgActivity(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	orgID, err := uuid.Parse(idStr)
+	if err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusBadRequest, "Bad Request", "Invalid organization UUID", nil)
+		return
+	}
+
+	activity, err := h.service.GetOrgActivity(r.Context(), orgID)
+	if err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "Internal Server Error", err.Error(), nil)
+		return
+	}
+
+	platformHttp.RespondJSON(w, http.StatusOK, activity, map[string]interface{}{
+		"count": len(activity),
+	})
+}

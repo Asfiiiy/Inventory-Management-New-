@@ -277,3 +277,154 @@ func (s *Service) UpdateOrganization(ctx context.Context, orgID uuid.UUID, name,
 
 	return err
 }
+
+type GlobalUser struct {
+	UserID    uuid.UUID `json:"user_id"`
+	OrgID     uuid.UUID `json:"org_id"`
+	OrgName   string    `json:"org_name"`
+	Email     string    `json:"email"`
+	Name      string    `json:"name"`
+	Role      string    `json:"role"`
+	IsActive  bool      `json:"is_active"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type AuditEvent struct {
+	AuditID    uuid.UUID `json:"audit_id"`
+	OrgID      uuid.UUID `json:"org_id"`
+	OrgName    string    `json:"org_name"`
+	Action     string    `json:"action"`
+	EntityType string    `json:"entity_type"`
+	EntityID   string    `json:"entity_id"`
+	UserEmail  string    `json:"user_email"`
+	CreatedAt  time.Time `json:"created_at"`
+	IPAddress  string    `json:"ip_address"`
+}
+
+func (s *Service) ListUsers(ctx context.Context) ([]GlobalUser, error) {
+	pool := s.tdb.Pool()
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+	_, _ = tx.Exec(ctx, "SET LOCAL row_security = off")
+
+	rows, err := tx.Query(ctx, `
+		SELECT 
+			u.user_id,
+			u.org_id,
+			COALESCE(o.name, 'Platform System') AS org_name,
+			u.email,
+			COALESCE(u.name, 'Store User') AS name,
+			u.role,
+			u.is_active,
+			u.created_at
+		FROM users u
+		LEFT JOIN organizations o ON o.org_id = u.org_id
+		ORDER BY u.created_at DESC
+		LIMIT 200;
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []GlobalUser
+	for rows.Next() {
+		var u GlobalUser
+		if err := rows.Scan(&u.UserID, &u.OrgID, &u.OrgName, &u.Email, &u.Name, &u.Role, &u.IsActive, &u.CreatedAt); err != nil {
+			return nil, err
+		}
+		list = append(list, u)
+	}
+	return list, rows.Err()
+}
+
+func (s *Service) ListAuditLogs(ctx context.Context, limit int) ([]AuditEvent, error) {
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
+	pool := s.tdb.Pool()
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+	_, _ = tx.Exec(ctx, "SET LOCAL row_security = off")
+
+	rows, err := tx.Query(ctx, `
+		SELECT
+			a.audit_id,
+			a.org_id,
+			COALESCE(o.name, 'Global') AS org_name,
+			a.action,
+			a.entity_type,
+			a.entity_id,
+			COALESCE(u.email, 'system@whoopit.io') AS user_email,
+			a.created_at,
+			COALESCE(a.ip_address::text, '127.0.0.1') AS ip_address
+		FROM audit_log a
+		LEFT JOIN organizations o ON o.org_id = a.org_id
+		LEFT JOIN users u ON u.user_id = a.user_id
+		ORDER BY a.created_at DESC
+		LIMIT $1;
+	`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []AuditEvent
+	for rows.Next() {
+		var ev AuditEvent
+		if err := rows.Scan(&ev.AuditID, &ev.OrgID, &ev.OrgName, &ev.Action, &ev.EntityType, &ev.EntityID, &ev.UserEmail, &ev.CreatedAt, &ev.IPAddress); err != nil {
+			return nil, err
+		}
+		list = append(list, ev)
+	}
+	return list, rows.Err()
+}
+
+func (s *Service) GetOrgActivity(ctx context.Context, orgID uuid.UUID) ([]AuditEvent, error) {
+	pool := s.tdb.Pool()
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+	_, _ = tx.Exec(ctx, "SET LOCAL row_security = off")
+
+	rows, err := tx.Query(ctx, `
+		SELECT
+			a.audit_id,
+			a.org_id,
+			COALESCE(o.name, 'Client Company') AS org_name,
+			a.action,
+			a.entity_type,
+			a.entity_id,
+			COALESCE(u.email, 'store-staff') AS user_email,
+			a.created_at,
+			COALESCE(a.ip_address::text, '127.0.0.1') AS ip_address
+		FROM audit_log a
+		LEFT JOIN organizations o ON o.org_id = a.org_id
+		LEFT JOIN users u ON u.user_id = a.user_id
+		WHERE a.org_id = $1
+		ORDER BY a.created_at DESC
+		LIMIT 50;
+	`, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []AuditEvent
+	for rows.Next() {
+		var ev AuditEvent
+		if err := rows.Scan(&ev.AuditID, &ev.OrgID, &ev.OrgName, &ev.Action, &ev.EntityType, &ev.EntityID, &ev.UserEmail, &ev.CreatedAt, &ev.IPAddress); err != nil {
+			return nil, err
+		}
+		list = append(list, ev)
+	}
+	return list, rows.Err()
+}
