@@ -185,10 +185,10 @@ function CompaniesContent() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
-              <Building2 className="w-7 h-7 text-indigo-500" />
+              <Building2 className="w-7 h-7 text-[#0c3843]" />
               <span>Companies Tracked</span>
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400">
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#0c3843]/10 border border-[#0c3843]/20 text-[#0c3843] dark:text-teal-400">
               {organizations.length} Companies Given Software
             </span>
           </div>
@@ -210,7 +210,7 @@ function CompaniesContent() {
 
           <button
             onClick={() => setIsProvisionOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0c3843] hover:bg-[#082931] text-white text-xs font-bold shadow-md shadow-[#0c3843]/20 transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Give Software to New Company</span>
@@ -422,7 +422,7 @@ function CompaniesContent() {
                             "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer",
                             isCurrent
                               ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20"
-                              : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600"
+                              : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-[#0c3843] hover:text-white dark:hover:bg-[#0c3843]"
                           )}
                           title="Open this company's inventory store"
                         >

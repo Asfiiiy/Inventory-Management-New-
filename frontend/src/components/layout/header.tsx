@@ -76,13 +76,13 @@ export function Header() {
       {/* Left: Quick Search / Barcode Quick-Lookup */}
       <div className="flex items-center gap-3 flex-1 max-w-md">
         <div className="relative w-full">
-          <Barcode className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-indigo-500" />
+          <Barcode className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#0c3843]" />
           <input
             type="text"
             value={searchVal}
             onChange={(e) => setSearchVal(e.target.value)}
             placeholder="Search or scan SKU barcode..."
-            className="w-full pl-9 pr-12 py-1.5 text-xs rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 outline-none text-slate-900 dark:text-white font-mono"
+            className="w-full pl-9 pr-12 py-1.5 text-xs rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-[#0c3843] focus:ring-2 focus:ring-[#0c3843]/15 outline-none text-slate-900 dark:text-white font-mono"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 handleSearchSubmit(searchVal);
@@ -100,7 +100,7 @@ export function Header() {
         {isSuperAdmin && (
           <Link
             href="/admin"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-xs font-bold transition-all shadow-xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0c3843]/10 hover:bg-[#0c3843]/20 text-[#0c3843] dark:text-teal-300 border border-[#0c3843]/20 text-xs font-bold transition-all shadow-xs"
             title="Go to Master Platform Control Center"
           >
             <Shield className="w-3.5 h-3.5" />
@@ -119,7 +119,7 @@ export function Header() {
 
         <Link
           href="/stock-out"
-          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-xs font-semibold transition-all"
+          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0c3843]/10 hover:bg-[#0c3843]/20 text-[#0c3843] dark:text-teal-300 border border-[#0c3843]/20 text-xs font-semibold transition-all"
         >
           <ArrowUpRight className="w-3.5 h-3.5" />
           <span>Stock Out</span>
@@ -159,8 +159,8 @@ export function Header() {
           >
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shadow-xs text-white ${
               isAdmin
-                ? "bg-gradient-to-tr from-indigo-600 to-purple-600 ring-2 ring-indigo-500/30"
-                : "bg-gradient-to-tr from-amber-600 to-orange-500 ring-2 ring-amber-500/30"
+                ? "bg-gradient-to-tr from-[#0c3843] to-teal-700 ring-2 ring-[#0c3843]/30"
+                : "bg-gradient-to-tr from-slate-700 to-slate-900 ring-2 ring-slate-500/30"
             }`}>
               {user?.name ? user.name.slice(0, 2).toUpperCase() : <User className="w-4 h-4" />}
             </div>
@@ -171,11 +171,11 @@ export function Header() {
               </span>
               <div className="flex items-center gap-1.5 mt-0.5">
                 {isAdmin ? (
-                  <span className="px-1.5 py-0.2 rounded-full bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 border border-indigo-500/20 text-[9px] font-bold uppercase tracking-wider">
-                    Admin
+                  <span className="px-1.5 py-0.2 rounded-full bg-[#0c3843]/10 text-[#0c3843] dark:text-teal-300 border border-[#0c3843]/20 text-[9px] font-bold uppercase tracking-wider">
+                    Store Admin
                   </span>
                 ) : (
-                  <span className="px-1.5 py-0.2 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[9px] font-bold uppercase tracking-wider">
+                  <span className="px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 text-[9px] font-bold uppercase tracking-wider">
                     Staff
                   </span>
                 )}
@@ -191,8 +191,8 @@ export function Header() {
               <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold text-white shadow-xs ${
                   isAdmin
-                    ? "bg-gradient-to-tr from-indigo-600 to-purple-600"
-                    : "bg-gradient-to-tr from-amber-600 to-orange-500"
+                    ? "bg-gradient-to-tr from-[#0c3843] to-teal-700"
+                    : "bg-gradient-to-tr from-slate-700 to-slate-900"
                 }`}>
                   {user?.name ? user.name.slice(0, 2).toUpperCase() : <User className="w-4 h-4" />}
                 </div>
@@ -209,11 +209,11 @@ export function Header() {
               <div className="space-y-1.5 text-[11px]">
                 <div className="flex items-center justify-between py-1 px-2 rounded-lg bg-slate-50 dark:bg-slate-800/50">
                   <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                    <Shield className="w-3.5 h-3.5 text-indigo-400" />
+                    <Shield className="w-3.5 h-3.5 text-[#0c3843]" />
                     Access Role:
                   </span>
                   <span className={`font-semibold capitalize ${
-                    isAdmin ? "text-indigo-500 dark:text-indigo-400" : "text-amber-500 dark:text-amber-400"
+                    isAdmin ? "text-[#0c3843] dark:text-teal-300" : "text-slate-600 dark:text-slate-300"
                   }`}>
                     {user?.role || "Staff"}
                   </span>

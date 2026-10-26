@@ -195,7 +195,7 @@ function ProductsMasterContent() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
-              <Package className="w-6 h-6 text-indigo-500" />
+              <Package className="w-6 h-6 text-[#0c3843]" />
               <span>Products / Items Master</span>
             </h1>
             <span
@@ -229,7 +229,7 @@ function ProductsMasterContent() {
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-40"
             title="Export Product Catalog to CSV"
           >
-            <Download className="w-3.5 h-3.5 text-indigo-500" />
+            <Download className="w-3.5 h-3.5 text-[#0c3843]" />
             <span>Export CSV</span>
           </button>
 
@@ -245,7 +245,7 @@ function ProductsMasterContent() {
           {isAdmin ? (
             <button
               onClick={handleOpenAdd}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xs transition-all w-fit cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0c3843] hover:bg-[#082931] text-white text-xs font-semibold shadow-md shadow-[#0c3843]/20 transition-all w-fit cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Add New Product</span>
@@ -269,7 +269,7 @@ function ProductsMasterContent() {
             placeholder="Search by product name or SKU..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 outline-none text-slate-900 dark:text-white"
+            className="w-full pl-10 pr-4 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-[#0c3843] focus:ring-2 focus:ring-[#0c3843]/15 outline-none text-slate-900 dark:text-white"
           />
         </div>
 
@@ -277,7 +277,7 @@ function ProductsMasterContent() {
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 outline-none text-slate-900 dark:text-white"
+            className="px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-[#0c3843] focus:ring-2 focus:ring-[#0c3843]/15 outline-none text-slate-900 dark:text-white"
           >
             {categories.map((cat) => (
               <option key={cat} value={cat}>
@@ -323,7 +323,7 @@ function ProductsMasterContent() {
                 <tr>
                   <td colSpan={8} className="px-5 py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+                      <Loader2 className="w-6 h-6 animate-spin text-[#0c3843]" />
                       <span className="font-medium text-xs">Fetching live inventory catalog from Go backend...</span>
                     </div>
                   </td>
@@ -332,7 +332,7 @@ function ProductsMasterContent() {
                 <tr>
                   <td colSpan={8} className="px-5 py-12 text-center text-slate-400">
                     <div className="max-w-md mx-auto space-y-3">
-                      <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mx-auto border border-indigo-500/20">
+                      <div className="w-12 h-12 rounded-2xl bg-[#0c3843]/10 text-[#0c3843] flex items-center justify-center mx-auto border border-[#0c3843]/20">
                         <Package className="w-6 h-6" />
                       </div>
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white">
@@ -347,7 +347,7 @@ function ProductsMasterContent() {
                         <div className="flex items-center justify-center gap-2 pt-2">
                           <button
                             onClick={handleOpenAdd}
-                            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
+                            className="px-4 py-2 rounded-xl bg-[#0c3843] hover:bg-[#082931] text-white text-xs font-semibold shadow-md shadow-[#0c3843]/20 transition-all cursor-pointer"
                           >
                             + Add First Product
                           </button>
@@ -371,7 +371,7 @@ function ProductsMasterContent() {
                       <td className="px-5 py-3 font-mono font-bold">
                         <Link
                           href={`/products/${p.id}`}
-                          className="text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1"
+                          className="text-[#0c3843] dark:text-teal-400 hover:underline inline-flex items-center gap-1"
                         >
                           <span>{p.sku}</span>
                         </Link>
@@ -379,7 +379,7 @@ function ProductsMasterContent() {
                       <td className="px-5 py-3 font-medium text-slate-900 dark:text-white">
                         <Link
                           href={`/products/${p.id}`}
-                          className="hover:text-indigo-500 hover:underline"
+                          className="hover:text-[#0c3843] hover:underline"
                         >
                           {p.name}
                         </Link>
@@ -422,14 +422,14 @@ function ProductsMasterContent() {
                         <div className="flex items-center justify-end gap-1.5">
                           <Link
                             href={`/products/${p.id}`}
-                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-[#0c3843]/10 text-slate-500 hover:text-[#0c3843] dark:hover:text-teal-400 transition-colors cursor-pointer"
                             title="View Product 360° Dossier"
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </Link>
                           <button
                             onClick={() => setPrintingProduct(p)}
-                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-[#0c3843]/10 text-slate-500 hover:text-[#0c3843] dark:hover:text-teal-400 transition-colors cursor-pointer"
                             title="Print Barcode Label"
                           >
                             <Printer className="w-3.5 h-3.5" />
@@ -469,7 +469,7 @@ function ProductsMasterContent() {
           <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Package className="w-4 h-4 text-indigo-500" />
+                <Package className="w-4 h-4 text-[#0c3843]" />
                 <span>{editingProduct ? "Edit Product" : "Add New Product"}</span>
               </h3>
               <button
@@ -493,7 +493,7 @@ function ProductsMasterContent() {
                     disabled={isSubmitting}
                     value={formData.sku}
                     onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono focus:border-indigo-500 outline-none"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono focus:border-[#0c3843] focus:ring-1 focus:ring-[#0c3843]/20 outline-none"
                     placeholder="e.g. ELEC-LAP-001"
                   />
                 </div>
@@ -508,7 +508,7 @@ function ProductsMasterContent() {
                     disabled={isSubmitting}
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 outline-none"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-[#0c3843] focus:ring-1 focus:ring-[#0c3843]/20 outline-none"
                     placeholder="e.g. Electronics"
                   />
                 </div>
@@ -524,7 +524,7 @@ function ProductsMasterContent() {
                   disabled={isSubmitting}
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-[#0c3843] focus:ring-1 focus:ring-[#0c3843]/20 outline-none"
                   placeholder="e.g. Dell Latitude 5540 Laptop"
                 />
               </div>
@@ -542,7 +542,7 @@ function ProductsMasterContent() {
                     disabled={isSubmitting}
                     value={formData.cost}
                     onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono focus:border-indigo-500 outline-none"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono focus:border-[#0c3843] focus:ring-1 focus:ring-[#0c3843]/20 outline-none"
                     placeholder="0.00"
                   />
                 </div>
@@ -559,7 +559,7 @@ function ProductsMasterContent() {
                     disabled={isSubmitting}
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono focus:border-indigo-500 outline-none"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono focus:border-[#0c3843] focus:ring-1 focus:ring-[#0c3843]/20 outline-none"
                     placeholder="0.00"
                   />
                 </div>
@@ -576,7 +576,7 @@ function ProductsMasterContent() {
                     disabled={isSubmitting}
                     value={formData.currentStock}
                     onChange={(e) => setFormData({ ...formData, currentStock: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono focus:border-indigo-500 outline-none"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono focus:border-[#0c3843] focus:ring-1 focus:ring-[#0c3843]/20 outline-none"
                   />
                 </div>
 
@@ -590,7 +590,7 @@ function ProductsMasterContent() {
                     disabled={isSubmitting}
                     value={formData.reorderLevel}
                     onChange={(e) => setFormData({ ...formData, reorderLevel: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono focus:border-indigo-500 outline-none"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono focus:border-[#0c3843] focus:ring-1 focus:ring-[#0c3843]/20 outline-none"
                   />
                 </div>
 
@@ -603,7 +603,7 @@ function ProductsMasterContent() {
                     disabled={isSubmitting}
                     value={formData.unit}
                     onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 outline-none"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-[#0c3843] focus:ring-1 focus:ring-[#0c3843]/20 outline-none"
                     placeholder="pcs"
                   />
                 </div>
@@ -621,7 +621,7 @@ function ProductsMasterContent() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl bg-[#0c3843] hover:bg-[#082931] text-white font-semibold shadow-md shadow-[#0c3843]/20 flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
                   <span>{editingProduct ? "Save Changes" : "Create Product"}</span>

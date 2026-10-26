@@ -298,7 +298,7 @@ function CustodyContent() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1">
+          <div className="flex items-center gap-2 text-xs font-semibold text-[#0c3843] dark:text-teal-400 uppercase tracking-wider mb-1">
             <HardHat className="w-4 h-4" />
             <span>Asset Lifecycle & Field Operations</span>
           </div>
@@ -322,7 +322,7 @@ function CustodyContent() {
 
           <button
             onClick={() => setIsCheckOutOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0c3843] hover:bg-[#082931] text-white text-xs font-semibold shadow-md shadow-[#0c3843]/20 transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Check-Out Asset</span>
@@ -340,7 +340,7 @@ function CustodyContent() {
             </div>
             <span className="text-[11px] text-slate-400">Master Catalog Hardware</span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-2xl bg-[#0c3843]/10 text-[#0c3843] dark:text-teal-400 flex items-center justify-center">
             <Boxes className="w-6 h-6" />
           </div>
         </div>
@@ -687,7 +687,7 @@ function CustodyContent() {
                 <button
                   type="submit"
                   disabled={isSubmittingCheckout}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-[#0c3843] hover:bg-[#082931] text-white text-xs font-semibold shadow-md shadow-[#0c3843]/20 transition-all disabled:opacity-50 cursor-pointer"
                 >
                   {isSubmittingCheckout ? "Deploying..." : "Confirm & Issue Slip"}
                 </button>

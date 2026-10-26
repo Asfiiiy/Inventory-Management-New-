@@ -198,7 +198,7 @@ function CustomFieldsContent() {
           {isAdmin && (
             <button
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0c3843] hover:bg-[#082931] text-white text-xs font-semibold shadow-md shadow-[#0c3843]/20 transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Add Custom Field</span>
@@ -233,14 +233,14 @@ function CustomFieldsContent() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full min-w-[700px] text-left text-xs">
             <thead className="bg-slate-50/75 dark:bg-slate-900 text-slate-500 border-b border-slate-200/80 dark:border-slate-800">
               <tr>
-                <th className="py-3 px-5 font-semibold">Field Name</th>
-                <th className="py-3 px-5 font-semibold">Type</th>
-                <th className="py-3 px-5 font-semibold">Options / Constraints</th>
-                <th className="py-3 px-5 font-semibold text-center">Required</th>
-                <th className="py-3 px-5 font-semibold text-right">Actions</th>
+                <th className="py-3 px-5 font-semibold min-w-[160px]">Field Name</th>
+                <th className="py-3 px-5 font-semibold min-w-[100px]">Type</th>
+                <th className="py-3 px-5 font-semibold min-w-[200px]">Options / Constraints</th>
+                <th className="py-3 px-5 font-semibold text-center min-w-[90px]">Required</th>
+                <th className="py-3 px-5 font-semibold text-right min-w-[90px] whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
@@ -423,7 +423,7 @@ function CustomFieldsContent() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-[#0c3843] hover:bg-[#082931] text-white text-xs font-semibold shadow-md shadow-[#0c3843]/20 transition-all disabled:opacity-50 cursor-pointer"
                 >
                   {isSubmitting ? "Creating..." : "Save Custom Field"}
                 </button>

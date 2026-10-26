@@ -230,7 +230,7 @@ export default function DashboardPage() {
           {isAdmin && (
             <Link
               href="/products?action=new"
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xs transition-all"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0c3843] hover:bg-[#082931] text-white text-xs font-bold shadow-md shadow-[#0c3843]/20 transition-all cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Product</span>
@@ -241,32 +241,32 @@ export default function DashboardPage() {
 
       {/* Fresh Start / 0-Data Onboarding Hero for Newly Provisioned Companies */}
       {products.length === 0 && !isStoreLoading && (
-        <div className="relative overflow-hidden rounded-3xl border border-indigo-500/20 bg-gradient-to-br from-indigo-950/40 via-slate-900/80 to-purple-950/30 p-6 sm:p-8 backdrop-blur-xl shadow-2xl">
+        <div className="relative overflow-hidden rounded-3xl border border-teal-500/20 bg-gradient-to-br from-[#0c3843] via-[#0e4452] to-[#082931] p-6 sm:p-8 shadow-2xl text-white">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
             <div className="space-y-3 max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-400/10 border border-teal-400/30 text-teal-300 text-xs font-semibold">
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
                 <span>Fresh Company Workspace &bull; 0 Historical Data &bull; Clean Slate</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                 Welcome to your Clean Software Workspace!
               </h2>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
                 Your software instance is live with a clean start (<strong className="text-white font-semibold">0 Products, 0 Stock Movements, $0 Valuation</strong>). All data you record here is strictly isolated via PostgreSQL 18 Row-Level Security (RLS) and is 100% private to your company.
               </p>
-              <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-slate-400">
-                <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-slate-300">
+                <span className="flex items-center gap-1.5 text-emerald-300 font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-300" />
                   Isolated Tenant Database
                 </span>
-                <span className="text-slate-600">&bull;</span>
-                <span className="flex items-center gap-1.5 text-indigo-300 font-medium">
-                  <ShieldCheck className="w-4 h-4 text-indigo-400" />
+                <span className="text-slate-400">&bull;</span>
+                <span className="flex items-center gap-1.5 text-teal-200 font-medium">
+                  <ShieldCheck className="w-4 h-4 text-teal-300" />
                   Full Store Admin Active
                 </span>
-                <span className="text-slate-600">&bull;</span>
+                <span className="text-slate-400">&bull;</span>
                 <span className="flex items-center gap-1.5 text-amber-300 font-medium">
-                  <Database className="w-4 h-4 text-amber-400" />
+                  <Database className="w-4 h-4 text-amber-300" />
                   0 SKUs &bull; Ready for Operations
                 </span>
               </div>
@@ -276,53 +276,53 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-[300px]">
               <Link
                 href="/products?action=new"
-                className="flex items-center gap-3 p-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/25 transition-all group"
+                className="flex items-center gap-3 p-3.5 rounded-2xl bg-white text-[#0c3843] hover:bg-slate-100 shadow-lg shadow-black/10 transition-all group cursor-pointer"
               >
-                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                  <Plus className="w-5 h-5" />
+                <div className="w-9 h-9 rounded-xl bg-[#0c3843]/10 text-[#0c3843] flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                  <Plus className="w-5 h-5 text-[#0c3843]" />
                 </div>
                 <div className="text-left">
                   <span className="text-xs font-bold block">1. Add First Product</span>
-                  <span className="text-[10px] text-indigo-100">Create custom SKU &amp; price</span>
+                  <span className="text-[10px] text-slate-500">Create custom SKU &amp; price</span>
                 </div>
               </Link>
 
               <Link
                 href="/import"
-                className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 text-white transition-all group"
+                className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/10 text-white transition-all group cursor-pointer"
               >
-                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
                   <FileSpreadsheet className="w-5 h-5" />
                 </div>
                 <div className="text-left">
                   <span className="text-xs font-bold block">2. Bulk Import CSV</span>
-                  <span className="text-[10px] text-slate-400">Upload existing catalog</span>
+                  <span className="text-[10px] text-slate-300">Upload existing catalog</span>
                 </div>
               </Link>
 
               <Link
                 href="/stock-in"
-                className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 text-white transition-all group"
+                className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/10 text-white transition-all group cursor-pointer"
               >
-                <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-300 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
                   <ArrowDownLeft className="w-5 h-5" />
                 </div>
                 <div className="text-left">
                   <span className="text-xs font-bold block">3. Inward Stock In</span>
-                  <span className="text-[10px] text-slate-400">Receive supplier stock</span>
+                  <span className="text-[10px] text-slate-300">Receive supplier stock</span>
                 </div>
               </Link>
 
               <Link
                 href="/contacts"
-                className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 text-white transition-all group"
+                className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/10 text-white transition-all group cursor-pointer"
               >
-                <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
                   <Building2 className="w-5 h-5" />
                 </div>
                 <div className="text-left">
                   <span className="text-xs font-bold block">4. Add Vendors</span>
-                  <span className="text-[10px] text-slate-400">Manage supplier directory</span>
+                  <span className="text-[10px] text-slate-300">Manage supplier directory</span>
                 </div>
               </Link>
             </div>
@@ -338,7 +338,7 @@ export default function DashboardPage() {
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Total Catalog SKUs
             </span>
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-[#0c3843]/10 text-[#0c3843] border border-[#0c3843]/20 flex items-center justify-center">
               <Package className="w-4 h-4" />
             </div>
           </div>
@@ -422,16 +422,16 @@ export default function DashboardPage() {
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Active Staff Custody
             </span>
-            <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-[#0c3843]/10 text-[#0c3843] border border-[#0c3843]/20 flex items-center justify-center">
               <ShieldCheck className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-2">
+          <div className="text-3xl font-extrabold text-[#0c3843] dark:text-teal-300 mt-2">
             {custodySummary ? custodySummary.deployed_to_employees : 0}
           </div>
           <div className="text-xs text-slate-400 mt-2 flex items-center justify-between">
             <span>Hardware in field</span>
-            <Link href="/custody" className="text-indigo-500 hover:underline font-medium">
+            <Link href="/custody" className="text-[#0c3843] dark:text-teal-400 hover:underline font-semibold">
               Manage &rarr;
             </Link>
           </div>
@@ -475,7 +475,7 @@ export default function DashboardPage() {
                 )}
                 <Link
                   href="/products?filter=low_stock"
-                  className="text-xs font-semibold text-indigo-500 hover:underline flex items-center gap-1"
+                  className="text-xs font-semibold text-[#0c3843] dark:text-teal-400 hover:underline flex items-center gap-1"
                 >
                   <span>All Products</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -530,11 +530,11 @@ export default function DashboardPage() {
                           <td className="px-4 py-3">
                             <Link
                               href={`/products/${id}`}
-                              className="font-semibold text-slate-900 dark:text-white hover:text-indigo-600 block"
+                              className="font-semibold text-slate-900 dark:text-white hover:text-[#0c3843] block"
                             >
                               {name}
                             </Link>
-                            <div className="text-[11px] font-mono text-indigo-500">{sku}</div>
+                            <div className="text-[11px] font-mono text-[#0c3843] font-medium">{sku}</div>
                           </td>
 
                           <td className="px-4 py-3 text-center">
@@ -562,7 +562,7 @@ export default function DashboardPage() {
                           </td>
 
                           <td className="px-4 py-3 text-center">
-                            <span className="font-bold text-indigo-600 dark:text-indigo-400 font-mono">
+                            <span className="font-bold text-[#0c3843] dark:text-teal-300 font-mono">
                               +{suggested} {uom}
                             </span>
                           </td>
@@ -589,7 +589,7 @@ export default function DashboardPage() {
           <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Layers className="w-4 h-4 text-indigo-500" />
+                <Layers className="w-4 h-4 text-[#0c3843]" />
                 <span>Inventory Valuation by Category</span>
               </h3>
               <span className="text-xs text-slate-400">Total: {categories.length} Categories</span>
@@ -606,7 +606,7 @@ export default function DashboardPage() {
                   >
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-bold text-slate-900 dark:text-white">{c.name}</span>
-                      <div className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                      <div className="font-mono font-bold text-[#0c3843] dark:text-teal-300">
                         {isStaff ? (
                           <span className="text-[11px] text-slate-400 flex items-center gap-1">
                             <Lock className="w-2.5 h-2.5 text-amber-500" /> Masked
@@ -620,7 +620,7 @@ export default function DashboardPage() {
                     {/* Progress Bar */}
                     <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
                       <div
-                        className="bg-indigo-600 h-1.5 rounded-full transition-all duration-500"
+                        className="bg-[#0c3843] h-1.5 rounded-full transition-all duration-500"
                         style={{ width: `${c.percentage}%` }}
                       />
                     </div>
@@ -668,7 +668,7 @@ export default function DashboardPage() {
                               isIn
                                 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                                 : isOut
-                                ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+                                ? "bg-[#0c3843]/10 text-[#0c3843] dark:text-teal-300 border border-[#0c3843]/20"
                                 : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
                             )}
                           >
@@ -681,7 +681,7 @@ export default function DashboardPage() {
                         <span
                           className={cn(
                             "font-bold font-mono",
-                            isIn ? "text-emerald-500" : isOut ? "text-blue-500" : "text-amber-500"
+                            isIn ? "text-emerald-500" : isOut ? "text-[#0c3843] dark:text-teal-300" : "text-amber-500"
                           )}
                         >
                           {isIn ? `+${m.quantity}` : isOut ? `-${m.quantity}` : `${m.quantity > 0 ? "+" : ""}${m.quantity}`}
@@ -705,7 +705,7 @@ export default function DashboardPage() {
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
               <Link
                 href="/adjustments"
-                className="text-xs font-semibold text-indigo-500 hover:underline flex items-center justify-center gap-1 w-full text-center"
+                className="text-xs font-semibold text-[#0c3843] dark:text-teal-400 hover:text-[#082931] hover:underline flex items-center justify-center gap-1 w-full text-center"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
                 <span>Record Inventory Adjustment</span>

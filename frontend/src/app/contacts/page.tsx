@@ -172,7 +172,7 @@ export default function ContactsDirectoryPage() {
             placeholder="Search contacts..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 outline-none text-slate-900 dark:text-white"
+            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-[#0c3843] focus:ring-1 focus:ring-[#0c3843]/20 outline-none text-slate-900 dark:text-white"
           />
         </div>
       </div>
@@ -315,7 +315,7 @@ export default function ContactsDirectoryPage() {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-[#0c3843] focus:ring-1 focus:ring-[#0c3843]/20 outline-none"
                   placeholder="e.g. John Doe / Dell Commercial Direct"
                 />
               </div>
@@ -328,7 +328,7 @@ export default function ContactsDirectoryPage() {
                   type="text"
                   value={formData.company}
                   onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-[#0c3843] focus:ring-1 focus:ring-[#0c3843]/20 outline-none"
                   placeholder="e.g. Dell Technologies Inc."
                 />
               </div>
@@ -342,7 +342,7 @@ export default function ContactsDirectoryPage() {
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 outline-none"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-[#0c3843] focus:ring-1 focus:ring-[#0c3843]/20 outline-none"
                     placeholder="orders@company.com"
                   />
                 </div>
@@ -355,7 +355,7 @@ export default function ContactsDirectoryPage() {
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 outline-none"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-[#0c3843] focus:ring-1 focus:ring-[#0c3843]/20 outline-none"
                     placeholder="+1 (555) 000-0000"
                   />
                 </div>
@@ -369,7 +369,7 @@ export default function ContactsDirectoryPage() {
                   type="text"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-[#0c3843] focus:ring-1 focus:ring-[#0c3843]/20 outline-none"
                   placeholder="123 Warehouse Blvd, Austin, TX"
                 />
               </div>
@@ -384,7 +384,7 @@ export default function ContactsDirectoryPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow-xs"
+                  className="px-5 py-2 rounded-xl bg-[#0c3843] hover:bg-[#082931] text-white font-semibold shadow-md shadow-[#0c3843]/20 transition-all cursor-pointer"
                 >
                   Save Contact
                 </button>
