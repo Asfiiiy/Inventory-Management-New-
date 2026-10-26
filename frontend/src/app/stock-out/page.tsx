@@ -306,7 +306,7 @@ function StockOutContent() {
                 disabled={isSubmitting}
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-mono focus:border-blue-500 outline-none"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-mono focus:border-[#0c3843] focus:ring-1 focus:ring-[#0c3843]/20 outline-none"
                 placeholder="SO-2026-001"
               />
             </div>
@@ -315,8 +315,8 @@ function StockOutContent() {
               type="submit"
               disabled={isSubmitting || products.length === 0}
               className={cn(
-                "w-full py-2.5 rounded-xl text-white font-semibold shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50",
-                "bg-blue-600 hover:bg-blue-500"
+                "w-full py-2.5 rounded-xl text-white font-semibold shadow-md shadow-[#0c3843]/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50",
+                "bg-[#0c3843] hover:bg-[#082931]"
               )}
             >
               {isSubmitting ? (
@@ -332,7 +332,7 @@ function StockOutContent() {
         {/* Outward History Table */}
         <div className="lg:col-span-2 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-xs space-y-4">
           <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <ShoppingBag className="w-4 h-4 text-blue-500" />
+            <ShoppingBag className="w-4 h-4 text-[#0c3843]" />
             <span>Sales & Outward Deductions Log</span>
           </h2>
 
@@ -376,7 +376,7 @@ function StockOutContent() {
                           {m.partyName || "N/A"}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-[#0c3843]/10 text-[#0c3843] border border-[#0c3843]/20">
                             -{m.quantity}
                           </span>
                         </td>

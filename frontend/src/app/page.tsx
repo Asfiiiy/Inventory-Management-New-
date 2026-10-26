@@ -222,7 +222,7 @@ export default function DashboardPage() {
           </Link>
           <Link
             href="/stock-out"
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-xs transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0c3843] hover:bg-[#082931] text-white text-xs font-semibold shadow-xs transition-all"
           >
             <ArrowUpRight className="w-3.5 h-3.5" />
             <span>Stock Out</span>

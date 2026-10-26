@@ -33,16 +33,16 @@ function AppShellInner({ children }: AppShellProps) {
 
   // 3. Dashboard 2: Software Dashboard (Client / Shopkeeper store software with store sidebar)
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#f4f7f9] text-slate-800 font-sans selection:bg-[#0c3843] selection:text-white">
       <Sidebar
         collapsed={collapsed}
         onToggle={() => setCollapsed(!collapsed)}
       />
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#f4f7f9]">
         <Header />
 
-        <main className="flex-1 overflow-y-auto bg-slate-50/70 dark:bg-slate-900/40 p-6 md:p-8">
+        <main className="flex-1 overflow-y-auto bg-[#f4f7f9] p-6 md:p-8">
           <div className="max-w-7xl mx-auto space-y-6">{children}</div>
         </main>
       </div>
