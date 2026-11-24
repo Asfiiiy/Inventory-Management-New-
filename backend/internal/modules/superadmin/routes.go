@@ -45,9 +45,13 @@ func RegisterRoutes(r chi.Router, tdb *database.TenantDB) {
 		sa.Get("/organizations", h.ListOrganizations)
 		sa.Post("/organizations", h.ProvisionOrganization)
 		sa.Patch("/organizations/{id}", h.UpdateOrganization)
+		sa.Put("/organizations/{id}", h.UpdateOrganization)
+		sa.Post("/organizations/{id}/extend-trial", h.ExtendTrial)
 		sa.Get("/organizations/{id}/activity", h.GetOrgActivity)
 		sa.Get("/telemetry", h.GetTelemetry)
+		sa.Get("/diagnostics", h.GetDiagnostics)
 		sa.Get("/users", h.ListUsers)
 		sa.Get("/audit", h.ListAuditLogs)
+		sa.Get("/audit/export", h.ExportAuditLogs)
 	})
 }

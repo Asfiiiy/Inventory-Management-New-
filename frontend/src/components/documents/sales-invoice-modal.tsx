@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Printer,
   X,
@@ -45,8 +46,13 @@ export function SalesInvoiceModal({ invoice, isOpen, onClose }: SalesInvoiceModa
   const [companyName, setCompanyName] = useState("WHOOPIT ENTERPRISE SYSTEMS");
   const [companyAddress, setCompanyAddress] = useState("Technology Park, Suite 400, Industrial Avenue");
   const [taxId, setTaxId] = useState("TAX-REG-9874102-K");
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen || !invoice) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !invoice || !mounted) return null;
 
   const handlePrint = () => {
     window.print();
@@ -63,7 +69,7 @@ export function SalesInvoiceModal({ invoice, isOpen, onClose }: SalesInvoiceModa
     minute: "2-digit",
   });
 
-  return (
+  return createPortal(
     <>
       {/* Interactive Modal UI (Hidden during window.print) */}
       <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150 no-print">
@@ -76,13 +82,13 @@ export function SalesInvoiceModal({ invoice, isOpen, onClose }: SalesInvoiceModa
               </div>
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>Sales Invoice / Receipt</span>
+                  <span>Dispatch Voucher / Receipt</span>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                     {invoice.invoiceNumber}
                   </span>
                 </h3>
                 <p className="text-[11px] text-slate-400">
-                  Customer: <strong>{invoice.customerName}</strong> &bull; {formattedDate}
+                  Recipient: <strong>{invoice.customerName}</strong> &bull; {formattedDate}
                 </p>
               </div>
             </div>
@@ -94,7 +100,7 @@ export function SalesInvoiceModal({ invoice, isOpen, onClose }: SalesInvoiceModa
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-xs transition-all cursor-pointer"
               >
                 <Printer className="w-4 h-4" />
-                <span>Print Invoice</span>
+                <span>Print Dispatch Slip</span>
               </button>
               <button
                 type="button"
@@ -121,7 +127,7 @@ export function SalesInvoiceModal({ invoice, isOpen, onClose }: SalesInvoiceModa
 
                 <div className="text-left sm:text-right space-y-1">
                   <span className="inline-block px-3 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold tracking-wider uppercase">
-                    Tax Invoice / Receipt
+                    Consumables Dispatch Voucher
                   </span>
                   <div className="text-base font-extrabold font-mono text-slate-900">
                     {invoice.invoiceNumber}
@@ -137,7 +143,7 @@ export function SalesInvoiceModal({ invoice, isOpen, onClose }: SalesInvoiceModa
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
                 <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Customer / Billed To
+                    Recipient Department / Staff
                   </div>
                   <div className="text-sm font-bold text-slate-900">{invoice.customerName}</div>
                   {invoice.customerPhone && (
@@ -154,11 +160,11 @@ export function SalesInvoiceModal({ invoice, isOpen, onClose }: SalesInvoiceModa
                 <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5 flex flex-col justify-between">
                   <div>
                     <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      Payment & Settlement
+                      Authorization & Settlement
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                        {invoice.paymentStatus || "PAID"}
+                        {invoice.paymentStatus || "AUTHORIZED"}
                       </span>
                       <span className="text-xs text-slate-600 font-medium">
                         Method: {invoice.paymentMethod || "Electronic / Ledger Move"}
@@ -166,7 +172,7 @@ export function SalesInvoiceModal({ invoice, isOpen, onClose }: SalesInvoiceModa
                     </div>
                   </div>
                   <div className="text-[11px] text-slate-400">
-                    Inventory Move: Physical Warehouse &rarr; Virtual Customer
+                    Inventory Move: Physical IT Store &rarr; Department Deployment
                   </div>
                 </div>
               </div>
@@ -395,6 +401,7 @@ export function SalesInvoiceModal({ invoice, isOpen, onClose }: SalesInvoiceModa
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }

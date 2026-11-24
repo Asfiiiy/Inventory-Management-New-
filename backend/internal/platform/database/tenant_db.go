@@ -19,7 +19,11 @@ type TenantDB struct {
 
 // NewTenantDB initializes a new TenantDB instance with the given pool.
 func NewTenantDB(pool *pgxpool.Pool) *TenantDB {
-	return &TenantDB{pool: pool}
+	tdb := &TenantDB{pool: pool}
+	if pool != nil {
+		_ = tdb.EnsureOfficeITSchema(context.Background())
+	}
+	return tdb
 }
 
 // Pool returns the underlying pgxpool.Pool instance.

@@ -21,12 +21,20 @@ func RegisterRoutes(r chi.Router, tdb *database.TenantDB, moveSvc *inventory.Sto
 
 	r.Group(func(cr chi.Router) {
 		cr.Use(middleware.TenantMiddleware)
+		cr.Use(middleware.PlanGate(tdb.Pool()))
 
 		cr.Post("/api/v1/assets/checkout", h.CheckOut)
 		cr.Post("/api/v1/assets/checkin", h.CheckIn)
+		cr.Get("/api/v1/assets/assignments", h.ListAllAssignments)
 		cr.Get("/api/v1/assets/custody/employee/{user_id}", h.ListEmployeeCustody)
 		cr.Get("/api/v1/assets/summary", h.GetCustodySummary)
 		cr.Get("/api/v1/assets/assignments/{id}/certificate", h.GetHandoverCertificate)
+
+		cr.Get("/api/v1/assets/requests/policy", h.GetApprovalPolicy)
+		cr.Get("/api/v1/assets/requests", h.ListAssetRequests)
+		cr.Post("/api/v1/assets/requests", h.CreateAssetRequest)
+		cr.Post("/api/v1/assets/requests/{id}/approve", h.ApproveAssetRequest)
+		cr.Post("/api/v1/assets/requests/{id}/reject", h.RejectAssetRequest)
 
 		if valkey != nil {
 			cr.Post("/api/v1/stock/reserve", func(w http.ResponseWriter, r *http.Request) {

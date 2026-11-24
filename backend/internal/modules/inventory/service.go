@@ -38,6 +38,9 @@ type ExecuteMoveInput struct {
 	MoveType       string          `json:"move_type"`
 	ReferenceCode  string          `json:"reference_code,omitempty"`
 	IdempotencyKey string          `json:"idempotency_key,omitempty"`
+	UsageTarget    string          `json:"usage_target,omitempty"`
+	UnitCost       float64         `json:"unit_cost,omitempty"`
+	BatchNumber    string          `json:"batch_number,omitempty"`
 	ActorID        uuid.UUID       `json:"actor_id"`
 	Lines          []MoveLineInput `json:"lines,omitempty"`
 }
@@ -217,6 +220,16 @@ func (s *StockMovementService) ExecuteMove(ctx context.Context, input ExecuteMov
 
 		refCode := pgtype.Text{String: input.ReferenceCode, Valid: input.ReferenceCode != ""}
 		idempKey := pgtype.Text{String: input.IdempotencyKey, Valid: input.IdempotencyKey != ""}
+		usageTarget := pgtype.Text{String: input.UsageTarget, Valid: input.UsageTarget != ""}
+		batchNum := pgtype.Text{String: input.BatchNumber, Valid: input.BatchNumber != ""}
+
+		var unitCostParam interface{}
+		if input.UnitCost > 0 {
+			costNum := pgtype.Numeric{}
+			_ = costNum.Scan(fmt.Sprintf("%.4f", input.UnitCost))
+			unitCostParam = costNum
+		}
+
 		move, err := q.CreateStockMove(ctx, db.CreateStockMoveParams{
 			OrgID:          input.OrgID,
 			ItemID:         input.ItemID,
@@ -226,6 +239,9 @@ func (s *StockMovementService) ExecuteMove(ctx context.Context, input ExecuteMov
 			MoveType:       input.MoveType,
 			ReferenceCode:  refCode,
 			IdempotencyKey: idempKey,
+			UsageTarget:    usageTarget,
+			BatchNumber:    batchNum,
+			UnitCost:       unitCostParam,
 			ActorID:        input.ActorID,
 		})
 		if err != nil {

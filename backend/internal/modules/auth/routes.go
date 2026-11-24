@@ -29,6 +29,7 @@ func RegisterRoutes(r chi.Router, tdb *database.TenantDB) {
 	// User management endpoints under /api/v1/users (Protected)
 	r.Route("/api/v1/users", func(users chi.Router) {
 		users.Use(middleware.TenantMiddleware)
+		users.Use(middleware.PlanGate(tdb.Pool()))
 		users.Get("/", h.ListUsers)
 		users.Post("/", h.CreateUser)
 		users.Patch("/{id}", h.UpdateUser)

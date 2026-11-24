@@ -15,6 +15,7 @@ func RegisterRoutes(r chi.Router, tdb *database.TenantDB, validator *profiles.Sc
 	r.Route("/api/v1", func(api chi.Router) {
 		// Protect all core inventory endpoints with Tenant Context Middleware
 		api.Use(middleware.TenantMiddleware)
+		api.Use(middleware.PlanGate(tdb.Pool()))
 
 		// Locations
 		api.Post("/locations", h.CreateLocation)
@@ -24,6 +25,8 @@ func RegisterRoutes(r chi.Router, tdb *database.TenantDB, validator *profiles.Sc
 		api.Post("/items", h.CreateItem)
 		api.Get("/items", h.ListItems)
 		api.Get("/items/{id}", h.GetItemByID)
+		api.Put("/items/{id}", h.UpdateItem)
+		api.Patch("/items/{id}", h.UpdateItem)
 		api.Delete("/items/{id}", h.DeleteItem)
 		api.Patch("/items/{id}/archive", h.ArchiveItem)
 		api.Post("/items/search", h.SearchItems)
@@ -37,6 +40,14 @@ func RegisterRoutes(r chi.Router, tdb *database.TenantDB, validator *profiles.Sc
 		// Suppliers
 		api.Post("/suppliers", h.CreateSupplier)
 		api.Get("/suppliers", h.ListSuppliers)
+		api.Put("/suppliers/{id}", h.UpdateSupplier)
+		api.Delete("/suppliers/{id}", h.DeleteSupplier)
+
+		// Workspace settings for the signed-in company
+		api.Get("/settings", h.GetWorkspaceSettings)
+		api.Put("/settings", h.UpdateWorkspaceSettings)
+		api.Get("/onboarding", h.GetOnboardingStatus)
+		api.Post("/onboarding/complete", h.CompleteOnboarding)
 
 		// Categories
 		api.Post("/categories", h.CreateCategory)

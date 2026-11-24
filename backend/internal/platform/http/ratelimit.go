@@ -72,6 +72,12 @@ func ExtractIP(r *http.Request) string {
 // Middleware returns an HTTP handler that enforces rate limiting.
 func (l *IPRateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Critical endpoints (login and health probes) are never blocked by background data polling
+		if r.URL.Path == "/healthz" || r.URL.Path == "/readyz" || r.URL.Path == "/api/v1/auth/login" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		ip := ExtractIP(r)
 		now := time.Now()
 

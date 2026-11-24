@@ -7,6 +7,7 @@ import {
   setAuthToken,
   getAuthToken,
   clearAuthToken,
+  getTenantId,
   setTenantId,
   UserProfile,
 } from "./api";
@@ -19,7 +20,11 @@ interface AuthContextType {
   isAdmin: boolean;
   isSuperAdmin: boolean;
   isStaff: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (
+    email: string,
+    password: string,
+    options?: { rememberMe?: boolean; redirectTo?: string }
+  ) => Promise<void>;
   register: (payload: { email: string; password: string; name?: string; org_name?: string }) => Promise<void>;
   logout: () => void;
 }
@@ -41,11 +46,34 @@ const AuthContext = createContext<AuthContextType>(defaultAuthContext);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [token, setTokenState] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cachedUserStr = localStorage.getItem("whoopit_auth_user");
+        if (cachedUserStr) return JSON.parse(cachedUserStr);
+      } catch {
+        // Ignore json parse error
+      }
+    }
+    return null;
+  });
 
-  // Initialize session from localStorage and refresh with /auth/me
+  const [token, setTokenState] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return getAuthToken();
+    }
+    return null;
+  });
+
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const savedToken = getAuthToken();
+      if (savedToken) return true;
+    }
+    return false;
+  });
+
+  // Verify session freshness with /auth/me in background
   useEffect(() => {
     async function initAuth() {
       const savedToken = getAuthToken();
@@ -56,29 +84,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setTokenState(savedToken);
 
-      // Restore cached user immediately for fast UI paint
-      const cachedUserStr = localStorage.getItem("whoopit_auth_user");
-      if (cachedUserStr) {
-        try {
-          setUser(JSON.parse(cachedUserStr));
-        } catch {
-          // Ignore json parse error
-        }
-      }
-
       // Verify token freshness with live backend
       try {
         const res = await apiClient.auth.me();
         if (res.data) {
           setUser(res.data);
           localStorage.setItem("whoopit_auth_user", JSON.stringify(res.data));
+          const roleLower = String(res.data.role || "").toLowerCase();
           const isMaster =
-            res.data.role === "superadmin" || res.data.email === "admin@whoopit.io";
-          const role = isMaster ? "admin" : "client";
+            roleLower === "superadmin" ||
+            roleLower === "platform_admin" ||
+            res.data.email === "admin@whoopit.io";
+          const isStaffRole =
+            roleLower === "staff" ||
+            roleLower === "employee" ||
+            roleLower === "storekeeper" ||
+            roleLower === "viewer";
+          const role = isMaster ? "admin" : isStaffRole ? "staff" : "client";
           localStorage.setItem("whoopit_auth_role", role);
           document.cookie = `whoopit_auth_role=${encodeURIComponent(role)}; path=/; max-age=604800; SameSite=Lax`;
           if (res.data.org_id) {
-            setTenantId(res.data.org_id);
+            const currentTenant = getTenantId();
+            const isPreviewing = localStorage.getItem("whoopit_preview_store") === "true";
+            if (!currentTenant || (!isPreviewing && res.data.role !== "superadmin")) {
+              setTenantId(res.data.org_id);
+            }
           }
         }
       } catch (err: any) {
@@ -97,17 +127,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(
-    async (email: string, password: string, targetRedirect?: string) => {
+    async (
+      email: string,
+      password: string,
+      options?: { rememberMe?: boolean; redirectTo?: string }
+    ) => {
       setIsLoading(true);
       try {
         const res = await apiClient.auth.login({ email, password });
         const { token: receivedToken, user: receivedUser } = res.data;
 
+        const roleLower = String(receivedUser.role || "").toLowerCase();
         const isMaster =
-          receivedUser.role === "superadmin" || receivedUser.email === "admin@whoopit.io";
-        const role = isMaster ? "admin" : "client";
+          roleLower === "superadmin" ||
+          roleLower === "platform_admin" ||
+          receivedUser.email === "admin@whoopit.io";
+        const isStaffLogin =
+          roleLower === "staff" ||
+          roleLower === "employee" ||
+          roleLower === "storekeeper" ||
+          roleLower === "viewer";
+        const role = isMaster ? "admin" : isStaffLogin ? "staff" : "client";
 
-        setAuthToken(receivedToken, role);
+        setAuthToken(receivedToken, role, options?.rememberMe !== false);
         setTokenState(receivedToken);
         setUser(receivedUser);
         localStorage.setItem("whoopit_auth_user", JSON.stringify(receivedUser));
@@ -116,7 +158,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setTenantId(receivedUser.org_id);
         }
 
-        const destination = targetRedirect || (isMaster ? "/admin" : "/");
+        const requested = options?.redirectTo;
+        const safeNext =
+          requested &&
+          requested.startsWith("/") &&
+          !requested.startsWith("//") &&
+          !requested.startsWith("/login")
+            ? requested
+            : null;
+
+        // SuperAdmin → /admin; company admin → /dashboard; staff → /my-assets
+        const destination =
+          safeNext ||
+          (isMaster ? "/admin" : isStaffLogin ? "/my-assets" : "/dashboard");
         if (typeof window !== "undefined") {
           window.location.href = destination;
         } else {
@@ -146,9 +200,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (typeof window !== "undefined") {
-          window.location.href = "/";
+          window.location.href = "/dashboard";
         } else {
-          router.push("/");
+          router.push("/dashboard");
         }
       } finally {
         setIsLoading(false);
@@ -157,7 +211,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [router]
   );
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    try {
+      await apiClient.auth.logout();
+    } catch {
+      // always clear local session even if API revoke fails
+    }
     clearAuthToken();
     setUser(null);
     setTokenState(null);
@@ -168,9 +227,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [router]);
 
-  const isSuperAdmin = user?.email === "admin@whoopit.io" || user?.role === "superadmin";
-  const isAdmin = user?.role === "owner" || user?.role === "admin" || user?.role === "superadmin";
-  const isStaff = user?.role === "staff" || user?.role === "employee";
+  const role = (user?.role || "").toLowerCase();
+  const isSuperAdmin = user?.email === "admin@whoopit.io" || role === "superadmin" || role === "platform_admin";
+  const isAdmin =
+    isSuperAdmin ||
+    role === "owner" ||
+    role === "admin" ||
+    role === "manager";
+  const isStaff =
+    role === "staff" ||
+    role === "employee" ||
+    role === "storekeeper" ||
+    role === "viewer";
   const isAuthenticated = !!token && !!user;
 
   return (

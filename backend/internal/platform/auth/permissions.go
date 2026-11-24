@@ -87,6 +87,22 @@ var PermissionTable = map[string]map[Permission]bool{
 		PermSettingsEdit:   false,
 		PermAuditView:      false,
 	},
+	// Office IT product role — same capability set as storekeeper, kept as "staff" in DB/UI.
+	RoleStaff: {
+		PermProductsView:   true,
+		PermProductsManage: false,
+		PermProductsDelete: false,
+		PermStockIn:        false,
+		PermStockOut:       false,
+		PermStockAdjust:    false,
+		PermStockCount:     false,
+		PermStockReserve:   false,
+		PermValuationView:  false,
+		PermReportsExport:  false,
+		PermUsersManage:    false,
+		PermSettingsEdit:   false,
+		PermAuditView:      false,
+	},
 	RoleViewer: {
 		PermProductsView:   true,
 		PermProductsManage: false,
@@ -112,8 +128,10 @@ func CanonicalRole(role string) string {
 		return RoleOwner
 	case RoleManager:
 		return RoleManager
-	case RoleStaff, RoleStorekeeper:
-		return RoleStorekeeper
+	case RoleStaff, RoleStorekeeper, "employee":
+		return RoleStaff
+	case "superadmin", "platform_admin":
+		return RoleOwner
 	case RoleViewer:
 		return RoleViewer
 	default:

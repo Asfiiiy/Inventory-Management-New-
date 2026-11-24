@@ -1,0 +1,31 @@
+---
+description: Whoopit has exactly two sides — vendor Admin vs client companies we license
+alwaysApply: true
+---
+
+# Two-portal product model (non-negotiable)
+
+There are **only two kinds of parties** in this product. Never blur them.
+
+## 1. Us — Whoopit (software company / vendor)
+
+- We built and sell the Office IT software.
+- Identity: `admin@whoopit.io`, role `superadmin` / `platform_admin`.
+- UI: **Master Admin / SaaS Creator portal** (`/admin`, `/superadmin`).
+- Job: provision client companies, set license plans, health/diagnostics, platform audit.
+- Seed org `whoopit-store` / `a0000000-0000-0000-0000-000000000001` is **our** binding workspace — **not** a paying client.
+- Never list SuperAdmin (or that seed org) under Client Companies, Client IT Managers, or client telemetry counts.
+
+## 2. Them — companies we give the software to
+
+- Paying / provisioned **client organizations** and their users (owner/admin/manager/staff).
+- UI: **company Office IT software** (`/dashboard`, custody, products, stock, etc.).
+- Job: manage that company's IT fleet, staff, vendors, repairs, finance reports.
+- Staff home is `/my-assets`; company admins use `/dashboard`.
+
+## Rules of thumb
+
+- If a feature is about **selling / licensing / controlling tenants** → Admin portal only.
+- If a feature is about **running one company's IT inventory** → client software only.
+- Do not treat Whoopit Admin as a "client IT manager", "staff", or "customer".
+- Do not invent a third portal type without an explicit product decision.

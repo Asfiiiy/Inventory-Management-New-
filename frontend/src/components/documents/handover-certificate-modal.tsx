@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Printer,
   X,
@@ -36,8 +37,13 @@ export function HandoverCertificateModal({
   const [companyAddress, setCompanyAddress] = useState(
     "Technology Park, Industrial Hub, Karachi, PK"
   );
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen || !certificate) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !certificate || !mounted) return null;
 
   const handlePrint = () => {
     window.print();
@@ -68,7 +74,7 @@ export function HandoverCertificateModal({
     hash: certificate.evidence?.record_hash?.slice(0, 16),
   });
 
-  return (
+  return createPortal(
     <>
       {/* Modal Dialog (Hidden on Print) */}
       <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150 no-print">
@@ -154,17 +160,26 @@ export function HandoverCertificateModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 text-xs">
                 <div>
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                    Custodian / Staff Assignee
+                    Receiving Office Employee
                   </div>
-                  <div className="font-bold text-slate-900 dark:text-white text-sm">
-                    {employeeName || "Designated Employee"}
+                  <div className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
+                    <span>{certificate.assignment.employee_name || employeeName || "Designated Employee"}</span>
+                    {certificate.assignment.employee_code && (
+                      <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-[#0c3843] dark:text-cyan-300 border border-cyan-500/30 font-mono text-[11px] font-extrabold">
+                        ID: {certificate.assignment.employee_code}
+                      </span>
+                    )}
                   </div>
-                  {employeeEmail && (
-                    <div className="text-slate-500 mt-0.5">{employeeEmail}</div>
+                  {certificate.assignment.employee_department && (
+                    <div className="text-slate-600 dark:text-slate-300 font-semibold mt-0.5">
+                      Department: {certificate.assignment.employee_department}
+                    </div>
                   )}
-                  <div className="text-[11px] text-slate-400 font-mono mt-1">
-                    User UUID: {certificate.assignment.assigned_to_user_id}
-                  </div>
+                  {(certificate.assignment.employee_email || employeeEmail) && (
+                    <div className="text-slate-500 mt-0.5">
+                      {certificate.assignment.employee_email || employeeEmail}
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -172,7 +187,7 @@ export function HandoverCertificateModal({
                     Issuance & Schedule
                   </div>
                   <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
-                    <span>Issue Date:</span>
+                    <span>Handover Date:</span>
                     <span className="font-semibold">{formattedCheckout}</span>
                   </div>
                   <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 mt-1">
@@ -193,30 +208,32 @@ export function HandoverCertificateModal({
               {/* Asset Specifics */}
               <div>
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-                  Assigned Hardware / Equipment
+                  Assigned IT Hardware / Office Equipment
                 </h4>
                 <div className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 border-b border-slate-200 dark:border-slate-800">
                       <tr>
-                        <th className="py-2.5 px-4 font-semibold">SKU / Item</th>
-                        <th className="py-2.5 px-4 font-semibold">Description</th>
-                        <th className="py-2.5 px-4 font-semibold">Serial / Asset ID</th>
+                        <th className="py-2.5 px-4 font-semibold">SKU / Code</th>
+                        <th className="py-2.5 px-4 font-semibold">IT Item Description</th>
+                        <th className="py-2.5 px-4 font-semibold">Serial / Asset Tag</th>
                         <th className="py-2.5 px-4 font-semibold text-right">Quantity</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                       <tr>
                         <td className="py-3 px-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                          {certificate.assignment.asset_sku || "HW-SERIALIZED"}
+                          {certificate.assignment.asset_sku || "IT-ASSET"}
                         </td>
                         <td className="py-3 px-4 font-medium">
-                          {certificate.assignment.asset_name || "Hardware Asset"}
+                          {certificate.assignment.asset_name || "Office IT Equipment"}
                         </td>
                         <td className="py-3 px-4 font-mono text-[11px] text-slate-500">
-                          {certificate.assignment.asset_id}
+                          {certificate.assignment.serial_number || certificate.assignment.asset_id.slice(0, 12)}
                         </td>
-                        <td className="py-3 px-4 font-bold text-right">1 Unit</td>
+                        <td className="py-3 px-4 font-bold text-right">
+                          {certificate.assignment.quantity || 1} {(certificate.assignment.quantity || 1) === 1 ? "Unit" : "Units"}
+                        </td>
                       </tr>
                     </tbody>
                   </table>
@@ -264,19 +281,36 @@ export function HandoverCertificateModal({
                   <strong>Custodian Undertaking:</strong> I acknowledge receipt of the asset listed above in the condition stated. I accept responsibility for safeguarding this asset against loss, unauthorized transfer, or negligence, and agree to return it upon request or project completion.
                 </p>
 
-                <div className="grid grid-cols-2 gap-12 pt-10 text-center">
+                <div className="grid grid-cols-2 gap-12 pt-6 text-center items-end">
                   <div className="border-t border-dashed border-slate-300 dark:border-slate-700 pt-2">
                     <div className="font-bold text-slate-800 dark:text-slate-200 text-xs">
-                      Authorized Storekeeper
+                      IT Inventory Administrator
                     </div>
-                    <div className="text-[10px] text-slate-400">Sign & Stamp</div>
+                    <div className="text-[10px] text-slate-400">Authorized Handover Issuer</div>
                   </div>
 
-                  <div className="border-t border-dashed border-slate-300 dark:border-slate-700 pt-2">
-                    <div className="font-bold text-slate-800 dark:text-slate-200 text-xs">
-                      {employeeName || "Receiving Custodian"}
+                  <div className="flex flex-col items-center">
+                    {certificate.assignment.signature_data && (
+                      <div className="mb-1 p-1.5 bg-white rounded-lg border border-slate-200">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={certificate.assignment.signature_data}
+                          alt="Employee Online Signature"
+                          className="h-14 object-contain"
+                        />
+                      </div>
+                    )}
+                    <div className="w-full border-t border-dashed border-slate-300 dark:border-slate-700 pt-2">
+                      <div className="font-bold text-slate-800 dark:text-slate-200 text-xs">
+                        {certificate.assignment.employee_name || employeeName || "Receiving Employee"}{" "}
+                        {certificate.assignment.employee_code ? `(${certificate.assignment.employee_code})` : ""}
+                      </div>
+                      <div className="text-[10px] text-emerald-600 font-semibold">
+                        {certificate.assignment.signature_data
+                          ? "✓ Online Digital Signature Captured"
+                          : "Signature & Date"}
+                      </div>
                     </div>
-                    <div className="text-[10px] text-slate-400">Signature & Date</div>
                   </div>
                 </div>
               </div>
@@ -286,7 +320,7 @@ export function HandoverCertificateModal({
       </div>
 
       {/* Standalone Print-only View */}
-      <div className="hidden print:block p-8 font-sans max-w-3xl mx-auto text-slate-900 bg-white">
+      <div id="printable-document-area" className="hidden print:block p-8 font-sans max-w-3xl mx-auto text-slate-900 bg-white">
         <div className="flex items-start justify-between pb-4 border-b border-slate-300">
           <div>
             <h1 className="text-xl font-bold">{companyName}</h1>
@@ -345,11 +379,25 @@ export function HandoverCertificateModal({
           I acknowledge receipt of the asset listed above in the specified condition and accept full responsibility for its safe custody.
         </p>
 
-        <div className="grid grid-cols-2 gap-12 pt-12 text-center text-xs">
-          <div className="border-t border-slate-400 pt-2">Authorized Storekeeper</div>
-          <div className="border-t border-slate-400 pt-2">{employeeName || "Receiving Custodian"}</div>
+        <div className="grid grid-cols-2 gap-12 pt-8 text-center text-xs items-end">
+          <div className="border-t border-slate-400 pt-2">IT Inventory Administrator</div>
+          <div className="flex flex-col items-center">
+            {certificate.assignment.signature_data && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={certificate.assignment.signature_data}
+                alt="Employee Signature"
+                className="h-12 object-contain mb-1"
+              />
+            )}
+            <div className="w-full border-t border-slate-400 pt-2">
+              {certificate.assignment.employee_name || employeeName || "Receiving Employee"}{" "}
+              {certificate.assignment.employee_code ? `(${certificate.assignment.employee_code})` : ""}
+            </div>
+          </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }

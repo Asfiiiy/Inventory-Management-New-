@@ -31,6 +31,11 @@ func (h *Handler) ListOrganizations(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// GetDiagnostics probes Postgres, Valkey, storage, and SMTP from the API process.
+func (h *Handler) GetDiagnostics(w http.ResponseWriter, r *http.Request) {
+	platformHttp.RespondJSON(w, http.StatusOK, h.service.ProbeInfrastructure(r.Context()), nil)
+}
+
 // GetTelemetry returns aggregate SaaS platform metrics across all client companies.
 func (h *Handler) GetTelemetry(w http.ResponseWriter, r *http.Request) {
 	telem, err := h.service.GetTelemetry(r.Context())
@@ -87,6 +92,38 @@ func (h *Handler) UpdateOrganization(w http.ResponseWriter, r *http.Request) {
 	platformHttp.RespondJSON(w, http.StatusOK, map[string]interface{}{
 		"updated": true,
 		"org_id":  orgID,
+	}, nil)
+}
+
+type ExtendTrialRequest struct {
+	Days int `json:"days,omitempty"`
+}
+
+// ExtendTrial grants an extension to an organization's trial evaluation period.
+func (h *Handler) ExtendTrial(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	orgID, err := uuid.Parse(idStr)
+	if err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusBadRequest, "Bad Request", "Invalid organization UUID", nil)
+		return
+	}
+
+	var req ExtendTrialRequest
+	_ = json.NewDecoder(r.Body).Decode(&req)
+	days := req.Days
+	if days <= 0 {
+		days = 14
+	}
+
+	if err := h.service.ExtendTrial(r.Context(), orgID, days); err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "Internal Server Error", err.Error(), nil)
+		return
+	}
+
+	platformHttp.RespondJSON(w, http.StatusOK, map[string]interface{}{
+		"extended": true,
+		"org_id":   orgID,
+		"days":     days,
 	}, nil)
 }
 

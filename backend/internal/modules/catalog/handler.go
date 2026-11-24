@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -15,11 +16,23 @@ import (
 	"whoopit-core/internal/middleware"
 	"whoopit-core/internal/modules/profiles"
 	"whoopit-core/internal/platform/database"
+	"whoopit-core/internal/platform/entitlement"
 	"whoopit-core/internal/platform/db"
 	platformHttp "whoopit-core/internal/platform/http"
-
-	"github.com/jackc/pgx/v5/pgconn"
 )
+
+// Reject angle-bracket markup / common XSS vectors in free-text catalog fields.
+var unsafeMarkupPattern = regexp.MustCompile(`(?i)<[^>]*>|javascript:|onerror\s*=|onload\s*=|onclick\s*=`)
+
+func catalogTextLooksUnsafe(value string) bool {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return false
+	}
+	return unsafeMarkupPattern.MatchString(trimmed) ||
+		strings.Contains(trimmed, "<") ||
+		strings.Contains(trimmed, ">")
+}
 
 // Handler manages HTTP endpoints for locations and the dynamic catalog items.
 type Handler struct {
@@ -172,6 +185,16 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := entitlement.CheckAdditionalItems(r.Context(), h.db.Pool(), orgID, 1); err != nil {
+		var pe *entitlement.PlanError
+		if errors.As(err, &pe) {
+			platformHttp.RespondProblem(w, r, pe.HTTPStatus, pe.Title, pe.Detail, nil)
+			return
+		}
+		platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "License Check Failed", "Could not verify the workspace plan.", nil)
+		return
+	}
+
 	profile := r.URL.Query().Get("profile")
 
 	var req CreateItemRequest
@@ -192,6 +215,29 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
 		validationErrors = append(validationErrors, platformHttp.ValidationErrorDetail{
 			Field:   "name",
 			Message: "name is a required relational invariant field",
+		})
+	} else if catalogTextLooksUnsafe(req.Name) {
+		validationErrors = append(validationErrors, platformHttp.ValidationErrorDetail{
+			Field:   "name",
+			Message: "name must not contain HTML, scripts, or markup",
+		})
+	}
+	if catalogTextLooksUnsafe(req.Sku) {
+		validationErrors = append(validationErrors, platformHttp.ValidationErrorDetail{
+			Field:   "sku",
+			Message: "sku must not contain HTML, scripts, or markup",
+		})
+	}
+	if req.CostPrice < 0 {
+		validationErrors = append(validationErrors, platformHttp.ValidationErrorDetail{
+			Field:   "cost_price",
+			Message: "cost_price must be greater than or equal to 0",
+		})
+	}
+	if req.SellingPrice < 0 {
+		validationErrors = append(validationErrors, platformHttp.ValidationErrorDetail{
+			Field:   "selling_price",
+			Message: "selling_price must be greater than or equal to 0",
 		})
 	}
 	if req.TrackingMode == "" {
@@ -249,7 +295,7 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
 
 	// 4. Execute Transaction
 	var createdItem db.Item
-	err = h.db.WithTenantTx(r.Context(), orgID, func(q *db.Queries) error {
+	err = h.db.WithTenantTxRaw(r.Context(), orgID, func(q *db.Queries, tx pgx.Tx) error {
 		attrs := req.Attributes
 		if len(attrs) == 0 {
 			attrs = json.RawMessage("{}")
@@ -268,10 +314,9 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 
-		// Update B3 extended fields
-		pool := h.db.Pool()
+		// Update extended fields within the exact same transaction
 		var updatedItem db.Item
-		err = pool.QueryRow(r.Context(), `
+		err = tx.QueryRow(r.Context(), `
 			UPDATE items
 			SET barcode = COALESCE(NULLIF($3, ''), barcode),
 			    cost_price = $4,
@@ -318,15 +363,27 @@ func (h *Handler) ListItems(w http.ResponseWriter, r *http.Request) {
 	categoryID := strings.TrimSpace(r.URL.Query().Get("category_id"))
 
 	query := `
-		SELECT * FROM items
-		WHERE org_id = $1 AND is_active = true
+		SELECT 
+			i.item_id, i.org_id, i.sku, i.name, i.tracking_mode,
+			i.base_uom, i.valuation_method, i.attributes, i.is_active,
+			i.created_at, i.updated_at, i.reorder_level, i.buffer_stock,
+			i.cost_price, i.selling_price, i.category_id, i.supplier_id,
+			i.barcode, i.image_url,
+			COALESCE((SELECT SUM(sb.on_hand) FROM stock_balances sb WHERE sb.item_id = i.item_id AND sb.org_id = i.org_id), 0)::float8 AS total_on_hand,
+			COALESCE((SELECT SUM(a.quantity) FROM asset_assignments a WHERE a.asset_id = i.item_id AND a.org_id = i.org_id AND a.returned_at IS NULL), 0)::float8 AS assigned_count,
+			COALESCE((SELECT SUM(r.quantity) FROM asset_repairs r WHERE r.item_id = i.item_id AND r.org_id = i.org_id AND r.status = 'FAULTY'), 0)::float8 AS faulty_count,
+			COALESCE((SELECT SUM(r.quantity) FROM asset_repairs r WHERE r.item_id = i.item_id AND r.org_id = i.org_id AND r.status = 'AT_VENDOR'), 0)::float8 AS in_repair_count,
+			COALESCE((SELECT SUM(r.quantity) FROM asset_repairs r WHERE r.item_id = i.item_id AND r.org_id = i.org_id AND r.status = 'REPAIRED'), 0)::float8 AS repaired_count,
+			COALESCE((SELECT SUM(r.quantity) FROM asset_repairs r WHERE r.item_id = i.item_id AND r.org_id = i.org_id AND r.status = 'SCRAPPED'), 0)::float8 AS scrapped_count
+		FROM items i
+		WHERE i.org_id = $1 AND i.is_active = true
 	`
 	args := []any{orgID}
 	argIdx := 2
 
 	if categoryID != "" {
 		if cUUID, err := uuid.Parse(categoryID); err == nil {
-			query += fmt.Sprintf(" AND category_id = $%d", argIdx)
+			query += fmt.Sprintf(" AND i.category_id = $%d", argIdx)
 			args = append(args, cUUID)
 			argIdx++
 		}
@@ -334,12 +391,12 @@ func (h *Handler) ListItems(w http.ResponseWriter, r *http.Request) {
 
 	if search != "" {
 		searchPattern := "%" + search + "%"
-		query += fmt.Sprintf(" AND (sku ILIKE $%d OR name ILIKE $%d OR barcode ILIKE $%d)", argIdx, argIdx, argIdx)
+		query += fmt.Sprintf(" AND (i.sku ILIKE $%d OR i.name ILIKE $%d OR i.barcode ILIKE $%d)", argIdx, argIdx, argIdx)
 		args = append(args, searchPattern)
 		argIdx++
 	}
 
-	query += " ORDER BY name ASC"
+	query += " ORDER BY i.name ASC"
 
 	pool := h.db.Pool()
 	rows, err := pool.Query(r.Context(), query, args...)
@@ -349,20 +406,38 @@ func (h *Handler) ListItems(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	var items []db.Item
+	type ItemWithStock struct {
+		db.Item
+		TotalOnHand   float64 `json:"total_on_hand"`
+		AssignedCount float64 `json:"assigned_count"`
+		FaultyCount   float64 `json:"faulty_count"`
+		InRepairCount float64 `json:"in_repair_count"`
+		RepairedCount float64 `json:"repaired_count"`
+		ScrappedCount float64 `json:"scrapped_count"`
+		TotalOwned    float64 `json:"total_owned"`
+	}
+
+	var items []ItemWithStock
 	for rows.Next() {
-		var it db.Item
+		var it ItemWithStock
 		err := rows.Scan(
 			&it.ItemID, &it.OrgID, &it.Sku, &it.Name, &it.TrackingMode,
 			&it.BaseUom, &it.ValuationMethod, &it.Attributes, &it.IsActive,
 			&it.CreatedAt, &it.UpdatedAt, &it.ReorderLevel, &it.BufferStock,
 			&it.CostPrice, &it.SellingPrice, &it.CategoryID, &it.SupplierID,
 			&it.Barcode, &it.ImageUrl,
+			&it.TotalOnHand,
+			&it.AssignedCount,
+			&it.FaultyCount,
+			&it.InRepairCount,
+			&it.RepairedCount,
+			&it.ScrappedCount,
 		)
 		if err != nil {
 			platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "Scan Error", err.Error(), nil)
 			return
 		}
+		it.TotalOwned = it.TotalOnHand + it.AssignedCount + it.FaultyCount + it.InRepairCount
 		items = append(items, it)
 	}
 
@@ -384,19 +459,46 @@ func (h *Handler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var item db.Item
-	err = h.db.WithTenantTx(r.Context(), orgID, func(q *db.Queries) error {
-		res, err := q.GetItemByID(r.Context(), db.GetItemByIDParams{
-			ItemID: itemID,
-			OrgID:  orgID,
-		})
-		if err != nil {
-			return err
-		}
-		item = res
-		return nil
-	})
-
+	query := `
+		SELECT 
+			i.item_id, i.org_id, i.sku, i.name, i.tracking_mode,
+			i.base_uom, i.valuation_method, i.attributes, i.is_active,
+			i.created_at, i.updated_at, i.reorder_level, i.buffer_stock,
+			i.cost_price, i.selling_price, i.category_id, i.supplier_id,
+			i.barcode, i.image_url,
+			COALESCE((SELECT SUM(sb.on_hand) FROM stock_balances sb WHERE sb.item_id = i.item_id AND sb.org_id = i.org_id), 0)::float8 AS total_on_hand,
+			COALESCE((SELECT SUM(a.quantity) FROM asset_assignments a WHERE a.asset_id = i.item_id AND a.org_id = i.org_id AND a.returned_at IS NULL), 0)::float8 AS assigned_count,
+			COALESCE((SELECT SUM(r.quantity) FROM asset_repairs r WHERE r.item_id = i.item_id AND r.org_id = i.org_id AND r.status = 'FAULTY'), 0)::float8 AS faulty_count,
+			COALESCE((SELECT SUM(r.quantity) FROM asset_repairs r WHERE r.item_id = i.item_id AND r.org_id = i.org_id AND r.status = 'AT_VENDOR'), 0)::float8 AS in_repair_count,
+			COALESCE((SELECT SUM(r.quantity) FROM asset_repairs r WHERE r.item_id = i.item_id AND r.org_id = i.org_id AND r.status = 'REPAIRED'), 0)::float8 AS repaired_count,
+			COALESCE((SELECT SUM(r.quantity) FROM asset_repairs r WHERE r.item_id = i.item_id AND r.org_id = i.org_id AND r.status = 'SCRAPPED'), 0)::float8 AS scrapped_count
+		FROM items i
+		WHERE i.org_id = $1 AND i.item_id = $2 AND i.is_active = true
+	`
+	pool := h.db.Pool()
+	var it struct {
+		db.Item
+		TotalOnHand   float64 `json:"total_on_hand"`
+		AssignedCount float64 `json:"assigned_count"`
+		FaultyCount   float64 `json:"faulty_count"`
+		InRepairCount float64 `json:"in_repair_count"`
+		RepairedCount float64 `json:"repaired_count"`
+		ScrappedCount float64 `json:"scrapped_count"`
+		TotalOwned    float64 `json:"total_owned"`
+	}
+	err = pool.QueryRow(r.Context(), query, orgID, itemID).Scan(
+		&it.ItemID, &it.OrgID, &it.Sku, &it.Name, &it.TrackingMode,
+		&it.BaseUom, &it.ValuationMethod, &it.Attributes, &it.IsActive,
+		&it.CreatedAt, &it.UpdatedAt, &it.ReorderLevel, &it.BufferStock,
+		&it.CostPrice, &it.SellingPrice, &it.CategoryID, &it.SupplierID,
+		&it.Barcode, &it.ImageUrl,
+		&it.TotalOnHand,
+		&it.AssignedCount,
+		&it.FaultyCount,
+		&it.InRepairCount,
+		&it.RepairedCount,
+		&it.ScrappedCount,
+	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			platformHttp.RespondProblem(w, r, http.StatusNotFound, "Not Found", "Item not found within organization scope", nil)
@@ -405,8 +507,9 @@ func (h *Handler) GetItemByID(w http.ResponseWriter, r *http.Request) {
 		platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "Internal Server Error", err.Error(), nil)
 		return
 	}
+	it.TotalOwned = it.TotalOnHand + it.AssignedCount + it.FaultyCount + it.InRepairCount
 
-	platformHttp.RespondJSON(w, http.StatusOK, item, nil)
+	platformHttp.RespondJSON(w, http.StatusOK, it, nil)
 }
 
 type SearchItemsRequest struct {
@@ -448,22 +551,27 @@ func (h *Handler) SearchItems(w http.ResponseWriter, r *http.Request) {
 	platformHttp.RespondJSON(w, http.StatusOK, items, map[string]interface{}{"count": len(items)})
 }
 
-// DeleteItem removes a catalog item, enforcing that only 'admin' accounts can perform deletions.
-func (h *Handler) DeleteItem(w http.ResponseWriter, r *http.Request) {
+type UpdateItemRequest struct {
+	Sku             *string          `json:"sku,omitempty"`
+	Name            *string          `json:"name,omitempty"`
+	TrackingMode    *string          `json:"tracking_mode,omitempty"`
+	BaseUom         *string          `json:"base_uom,omitempty"`
+	ValuationMethod *string          `json:"valuation_method,omitempty"`
+	Barcode         *string          `json:"barcode,omitempty"`
+	CostPrice       *float64         `json:"cost_price,omitempty"`
+	SellingPrice    *float64         `json:"selling_price,omitempty"`
+	ReorderLevel    *float64         `json:"reorder_level,omitempty"`
+	BufferStock     *float64         `json:"buffer_stock,omitempty"`
+	CategoryID      *string          `json:"category_id,omitempty"`
+	SupplierID      *string          `json:"supplier_id,omitempty"`
+	Attributes      *json.RawMessage `json:"attributes,omitempty"`
+}
+
+// UpdateItem updates properties of an existing catalog item.
+func (h *Handler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 	orgID, ok := middleware.GetTenantID(r.Context())
 	if !ok {
 		platformHttp.RespondProblem(w, r, http.StatusUnauthorized, "Unauthorized", "Tenant context missing", nil)
-		return
-	}
-
-	role, _ := middleware.GetUserRole(r.Context())
-	if role == "staff" {
-		platformHttp.RespondProblem(
-			w, r, http.StatusForbidden,
-			"Forbidden: Action Restricted",
-			"Staff accounts are blocked from deleting products. Only Administrators may delete catalog items.",
-			nil,
-		)
 		return
 	}
 
@@ -474,25 +582,183 @@ func (h *Handler) DeleteItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var tag pgconn.CommandTag
+	var req UpdateItemRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusBadRequest, "Bad Request", "Malformed JSON body", nil)
+		return
+	}
+
+	var updateErrors []platformHttp.ValidationErrorDetail
+	if req.Name != nil {
+		if strings.TrimSpace(*req.Name) == "" {
+			updateErrors = append(updateErrors, platformHttp.ValidationErrorDetail{
+				Field: "name", Message: "name cannot be empty",
+			})
+		} else if catalogTextLooksUnsafe(*req.Name) {
+			updateErrors = append(updateErrors, platformHttp.ValidationErrorDetail{
+				Field: "name", Message: "name must not contain HTML, scripts, or markup",
+			})
+		}
+	}
+	if req.Sku != nil && catalogTextLooksUnsafe(*req.Sku) {
+		updateErrors = append(updateErrors, platformHttp.ValidationErrorDetail{
+			Field: "sku", Message: "sku must not contain HTML, scripts, or markup",
+		})
+	}
+	if req.CostPrice != nil && *req.CostPrice < 0 {
+		updateErrors = append(updateErrors, platformHttp.ValidationErrorDetail{
+			Field: "cost_price", Message: "cost_price must be greater than or equal to 0",
+		})
+	}
+	if req.SellingPrice != nil && *req.SellingPrice < 0 {
+		updateErrors = append(updateErrors, platformHttp.ValidationErrorDetail{
+			Field: "selling_price", Message: "selling_price must be greater than or equal to 0",
+		})
+	}
+	if len(updateErrors) > 0 {
+		platformHttp.RespondProblem(
+			w, r, http.StatusUnprocessableEntity,
+			"Unprocessable Entity: Schema Validation Fault",
+			"One or more invariant validations failed.",
+			updateErrors,
+		)
+		return
+	}
+
+	// Dynamic validation if attributes were provided
+	if req.Attributes != nil && len(*req.Attributes) > 0 {
+		dynErrors, dynErr := ValidateDynamicCustomFields(r.Context(), h.db, orgID, *req.Attributes)
+		if dynErr == nil && len(dynErrors) > 0 {
+			platformHttp.RespondProblem(
+				w, r, http.StatusUnprocessableEntity,
+				"Unprocessable Entity: Schema Validation Fault",
+				"One or more dynamic schema validations failed.",
+				dynErrors,
+			)
+			return
+		}
+	}
+
+	var updatedItem db.Item
 	err = h.db.WithTenantTxRaw(r.Context(), orgID, func(q *db.Queries, tx pgx.Tx) error {
-		var execErr error
-		tag, execErr = tx.Exec(r.Context(), "DELETE FROM items WHERE item_id = $1 AND org_id = $2", itemID, orgID)
-		return execErr
+		var catUUID, supUUID *uuid.UUID
+		if req.CategoryID != nil && *req.CategoryID != "" {
+			if id, err := uuid.Parse(*req.CategoryID); err == nil {
+				catUUID = &id
+			}
+		}
+		if req.SupplierID != nil && *req.SupplierID != "" {
+			if id, err := uuid.Parse(*req.SupplierID); err == nil {
+				supUUID = &id
+			}
+		}
+
+		return tx.QueryRow(r.Context(), `
+			UPDATE items
+			SET sku = COALESCE($3, sku),
+			    name = COALESCE($4, name),
+			    base_uom = COALESCE($5, base_uom),
+			    barcode = COALESCE($6, barcode),
+			    cost_price = COALESCE($7, cost_price),
+			    selling_price = COALESCE($8, selling_price),
+			    reorder_level = COALESCE($9, reorder_level),
+			    buffer_stock = COALESCE($10, buffer_stock),
+			    category_id = COALESCE($11, category_id),
+			    supplier_id = COALESCE($12, supplier_id),
+			    attributes = CASE 
+			        WHEN $13::jsonb IS NOT NULL THEN items.attributes || $13::jsonb 
+			        ELSE items.attributes 
+			    END,
+			    updated_at = NOW()
+			WHERE item_id = $1 AND org_id = $2
+			RETURNING *
+		`, itemID, orgID, req.Sku, req.Name, req.BaseUom, req.Barcode,
+			req.CostPrice, req.SellingPrice, req.ReorderLevel, req.BufferStock,
+			catUUID, supUUID, req.Attributes).Scan(
+			&updatedItem.ItemID, &updatedItem.OrgID, &updatedItem.Sku, &updatedItem.Name,
+			&updatedItem.TrackingMode, &updatedItem.BaseUom, &updatedItem.ValuationMethod,
+			&updatedItem.Attributes, &updatedItem.IsActive, &updatedItem.CreatedAt, &updatedItem.UpdatedAt,
+			&updatedItem.ReorderLevel, &updatedItem.BufferStock, &updatedItem.CostPrice,
+			&updatedItem.SellingPrice, &updatedItem.CategoryID, &updatedItem.SupplierID,
+			&updatedItem.Barcode, &updatedItem.ImageUrl,
+		)
 	})
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			platformHttp.RespondProblem(w, r, http.StatusNotFound, "Not Found", "Item not found", nil)
+			return
+		}
 		platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "Internal Server Error", err.Error(), nil)
 		return
 	}
 
-	if tag.RowsAffected() == 0 {
-		platformHttp.RespondProblem(w, r, http.StatusNotFound, "Not Found", "Item not found within organization scope", nil)
+	platformHttp.RespondJSON(w, http.StatusOK, updatedItem, nil)
+}
+
+// DeleteItem removes a catalog item or gracefully archives it if movements exist.
+func (h *Handler) DeleteItem(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := middleware.GetTenantID(r.Context())
+	if !ok {
+		platformHttp.RespondProblem(w, r, http.StatusUnauthorized, "Unauthorized", "Tenant context missing", nil)
+		return
+	}
+
+	idStr := chi.URLParam(r, "id")
+	itemID, err := uuid.Parse(idStr)
+	if err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusBadRequest, "Bad Request", "Invalid item UUID parameter", nil)
+		return
+	}
+
+	var wasArchived bool
+	err = h.db.WithTenantTxRaw(r.Context(), orgID, func(q *db.Queries, tx pgx.Tx) error {
+		var hasReferences bool
+		err := tx.QueryRow(r.Context(), `
+			SELECT EXISTS (
+				SELECT 1 FROM stock_moves WHERE item_id = $1
+				UNION ALL
+				SELECT 1 FROM asset_assignments WHERE asset_id = $1
+			)
+		`, itemID).Scan(&hasReferences)
+		if err != nil {
+			return err
+		}
+
+		if hasReferences {
+			tag, execErr := tx.Exec(r.Context(), "UPDATE items SET is_active = false, updated_at = NOW() WHERE item_id = $1 AND org_id = $2", itemID, orgID)
+			if execErr != nil {
+				return execErr
+			}
+			if tag.RowsAffected() == 0 {
+				return pgx.ErrNoRows
+			}
+			wasArchived = true
+			return nil
+		}
+
+		tag, execErr := tx.Exec(r.Context(), "DELETE FROM items WHERE item_id = $1 AND org_id = $2", itemID, orgID)
+		if execErr != nil {
+			return execErr
+		}
+		if tag.RowsAffected() == 0 {
+			return pgx.ErrNoRows
+		}
+		return nil
+	})
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			platformHttp.RespondProblem(w, r, http.StatusNotFound, "Not Found", "Item not found within organization scope", nil)
+			return
+		}
+		platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "Internal Server Error", err.Error(), nil)
 		return
 	}
 
 	platformHttp.RespondJSON(w, http.StatusOK, map[string]interface{}{
-		"deleted": true,
-		"item_id": itemID,
+		"deleted":  true,
+		"archived": wasArchived,
+		"item_id":  itemID,
 	}, nil)
 }

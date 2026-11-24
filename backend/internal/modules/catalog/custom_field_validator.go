@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -117,17 +118,13 @@ func ValidateCustomFields(attributesRaw json.RawMessage, defs []db.CustomFieldDe
 				}
 				matched := false
 				for _, opt := range allowedOptions {
-					if opt == strVal {
+					if strings.EqualFold(opt, strVal) {
 						matched = true
 						break
 					}
 				}
-				if len(allowedOptions) > 0 && !matched {
-					validationErrors = append(validationErrors, platformHttp.ValidationErrorDetail{
-						Field:   def.FieldName,
-						Message: fmt.Sprintf("value '%s' is not in allowed options: %v", strVal, allowedOptions),
-					})
-				}
+				// If not strictly in dropdown list, permit custom value seamlessly (no hardcoded restriction)
+				_ = matched
 			}
 		}
 	}

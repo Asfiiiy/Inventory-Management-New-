@@ -15,6 +15,7 @@ func RegisterRoutes(r chi.Router, tdb *database.TenantDB, moveSvc *inventory.Sto
 
 	r.Group(func(ret chi.Router) {
 		ret.Use(middleware.TenantMiddleware)
+		ret.Use(middleware.PlanGate(tdb.Pool()))
 
 		ret.Post("/api/v1/retail/sell", h.Sell)
 	})

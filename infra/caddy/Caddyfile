@@ -25,7 +25,7 @@
 
     # Frontend Next.js Web App
     handle {
-        reverse_proxy web:3000
+        reverse_proxy web:3100
     }
 
     # Security Headers

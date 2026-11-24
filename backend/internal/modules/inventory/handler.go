@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -35,6 +34,9 @@ type CreateMoveRequest struct {
 	MoveType       string          `json:"move_type"`
 	ReferenceCode  string          `json:"reference_code,omitempty"`
 	IdempotencyKey string          `json:"idempotency_key,omitempty"`
+	UsageTarget    string          `json:"usage_target,omitempty"`
+	UnitCost       float64         `json:"unit_cost,omitempty"`
+	BatchNumber    string          `json:"batch_number,omitempty"`
 	Lines          []MoveLineInput `json:"lines,omitempty"`
 }
 
@@ -87,18 +89,6 @@ func (h *Handler) CreateMove(w http.ResponseWriter, r *http.Request) {
 		req.MoveType = "INTERNAL_TRANSFER"
 	}
 
-	// RBAC: Block staff from performing manual stock adjustments or write-offs
-	role, _ := middleware.GetUserRole(r.Context())
-	if role == "staff" && (strings.Contains(strings.ToUpper(req.MoveType), "ADJUSTMENT") || strings.Contains(strings.ToUpper(req.MoveType), "SCRAP")) {
-		platformHttp.RespondProblem(
-			w, r, http.StatusForbidden,
-			"Forbidden: Action Restricted",
-			"Staff accounts are blocked from performing manual stock adjustments. Only Administrators are permitted.",
-			nil,
-		)
-		return
-	}
-
 	input := ExecuteMoveInput{
 		OrgID:          orgID,
 		ItemID:         itemID,
@@ -109,6 +99,9 @@ func (h *Handler) CreateMove(w http.ResponseWriter, r *http.Request) {
 		MoveType:       req.MoveType,
 		ReferenceCode:  req.ReferenceCode,
 		IdempotencyKey: req.IdempotencyKey,
+		UsageTarget:    req.UsageTarget,
+		UnitCost:       req.UnitCost,
+		BatchNumber:    req.BatchNumber,
 		Lines:          req.Lines,
 	}
 

@@ -9,11 +9,19 @@ export interface Product {
   sku: string;
   name: string;
   category: string;
-  cost: number;         // Cost Price
-  price: number;        // Selling Price
-  currentStock: number; // Available on-hand quantity from PostgreSQL
-  reorderLevel: number; // Low stock alert threshold
-  unit: string;         // unit / pcs / boxes
+  cost: number;          // Cost Price
+  price: number;         // Selling / Replacement Value
+  currentStock: number;  // Available in IT Store (on-hand)
+  assignedCount: number; // Handed over / Assigned to Employees
+  faultyCount: number;   // Faulty / Damaged in office
+  inRepairCount: number; // At Vendor for Repair
+  repairedCount: number; // Repaired & Returned from Vendor (Cumulative track record)
+  scrappedCount: number; // Permanently scrapped
+  totalOwned: number;    // Total Owned (In Store + Assigned + Faulty + In Repair)
+  reorderLevel: number;  // Low stock alert threshold
+  unit: string;          // unit / pcs / boxes
+  barcode?: string;
+  attributes?: Record<string, any>;
   updatedAt: string;
 }
 
@@ -40,6 +48,9 @@ export interface Contact {
   phone: string;
   address: string;
   company?: string;
+  employeeCode?: string;
+  department?: string;
+  deskLocation?: string;
 }
 
 interface StandardLocations {
@@ -59,6 +70,12 @@ interface InventoryContextType {
   // Metrics
   totalProductsCount: number;
   totalInventoryValuation: number;
+  totalOwnedUnits: number;
+  totalInStoreUnits: number;
+  totalAssignedUnits: number;
+  totalFaultyUnits: number;
+  totalInRepairUnits: number;
+  totalRepairedUnits: number;
   lowStockItems: Product[];
   // Actions connected to Live Go Backend API
   addProduct: (product: {
@@ -70,9 +87,11 @@ interface InventoryContextType {
     currentStock: number;
     reorderLevel: number;
     unit?: string;
+    barcode?: string;
+    attributes?: Record<string, any>;
   }) => Promise<{ success: boolean; error?: string }>;
-  updateProduct: (id: string, product: Partial<Product>) => void;
-  deleteProduct: (id: string) => void;
+  updateProduct: (id: string, product: Partial<Product>) => Promise<{ success: boolean; error?: string }>;
+  deleteProduct: (id: string) => Promise<{ success: boolean; error?: string }>;
   stockIn: (data: {
     productId: string;
     quantity: number;
@@ -95,8 +114,9 @@ interface InventoryContextType {
     reason: string;
     reference: string;
   }) => Promise<{ success: boolean; error?: string }>;
-  addContact: (contact: Omit<Contact, "id">) => void;
-  deleteContact: (id: string) => void;
+  addContact: (contact: Omit<Contact, "id">) => Promise<{ success: boolean; error?: string; notice?: string }>;
+  updateContact: (id: string, updated: Partial<Contact>) => Promise<{ success: boolean; error?: string; notice?: string }>;
+  deleteContact: (id: string) => Promise<{ success: boolean; error?: string; notice?: string }>;
   refetch: () => Promise<void>;
   resetToDefaults: () => Promise<void>;
 }
@@ -109,50 +129,15 @@ const DEFAULT_LOCATIONS: StandardLocations = {
   scrapId: "",
 };
 
-const defaultContacts: Contact[] = [
-  {
-    id: "cont-1",
-    name: "Dell Commercial Direct",
-    type: "SUPPLIER",
-    email: "enterprise-orders@dell.com",
-    phone: "+1 (800) 456-3355",
-    address: "One Dell Way, Round Rock, TX",
-    company: "Dell Technologies",
-  },
-  {
-    id: "cont-2",
-    name: "Tech Distributor Pro",
-    type: "SUPPLIER",
-    email: "supply@techdistributor.com",
-    phone: "+1 (555) 019-2834",
-    address: "742 Evergreen Terrace, Springfield, IL",
-    company: "Tech Distribution Alliance",
-  },
-  {
-    id: "cont-3",
-    name: "Apex Dynamics Corp",
-    type: "CUSTOMER",
-    email: "procurement@apexdynamics.io",
-    phone: "+1 (555) 782-9901",
-    address: "100 Innovation Way, Boston, MA",
-    company: "Apex Dynamics",
-  },
-  {
-    id: "cont-4",
-    name: "Starlight Digital Labs",
-    type: "CUSTOMER",
-    email: "it-ops@starlightlabs.net",
-    phone: "+1 (555) 341-8890",
-    address: "450 Silicon Avenue, San Jose, CA",
-    company: "Starlight Media Inc.",
-  },
-];
+const STAFF_SIGN_IN_PASSWORD = "Password123!";
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
 
 function getTenantOrgId(): string {
-  if (typeof window !== "undefined") return "default";
+  if (typeof window === "undefined") return "default";
   try {
+    const tenantId = localStorage.getItem("whoopit_tenant_id");
+    if (tenantId) return tenantId;
     const userStr = localStorage.getItem("whoopit_auth_user");
     return userStr ? JSON.parse(userStr)?.org_id || "default" : "default";
   } catch {
@@ -162,29 +147,50 @@ function getTenantOrgId(): string {
 
 export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const activeOrgId = user?.org_id || getTenantOrgId();
+  const currentTenant = typeof window !== "undefined" ? localStorage.getItem("whoopit_tenant_id") || user?.org_id || getTenantOrgId() : "default";
+  const activeOrgId = currentTenant;
 
   const [products, setProducts] = useState<Product[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
-  const [contacts, setContacts] = useState<Contact[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const orgId = activeOrgId;
-      const saved = localStorage.getItem(`whoopit_contacts_${orgId}`);
-      if (saved) return JSON.parse(saved);
-      // Only demo tenant gets initial sample contacts
-      if (orgId === "a0000000-0000-0000-0000-000000000001") {
-        return defaultContacts;
-      }
-      return [];
-    } catch {
-      return [];
-    }
-  });
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [locations, setLocations] = useState<StandardLocations>(DEFAULT_LOCATIONS);
   const [isLoading, setIsLoading] = useState(true);
   const [isBackendConnected, setIsBackendConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const loadDirectory = useCallback(async () => {
+    const [supRes, userRes] = await Promise.all([
+      apiClient.suppliers.list(),
+      apiClient.users.list(),
+    ]);
+    const vendors: Contact[] = (supRes.data || []).map((supplier) => ({
+      id: supplier.supplier_id,
+      name: supplier.name,
+      type: "SUPPLIER",
+      email: supplier.email || "",
+      phone: supplier.phone || "",
+      address: supplier.address || "",
+      company: supplier.notes || "",
+    }));
+    const staff: Contact[] = (userRes.data || [])
+      .filter((account) => account.is_active !== false && String(account.role).toLowerCase() !== "superadmin")
+      .map((account) => ({
+        id: account.id,
+        name: account.name || account.email,
+        type: "CUSTOMER" as const,
+        email: account.email || "",
+        phone: "",
+        address: account.desk_location || "",
+        company: account.department || "",
+        employeeCode: account.employee_code || "",
+        department: account.department || "",
+        deskLocation: account.desk_location || "",
+      }));
+    setContacts([...vendors, ...staff]);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(`whoopit_contacts_${getTenantOrgId()}`);
+    }
+  }, []);
 
   // 1. Resolve standard locations and fetch backend state
   const fetchBackendData = useCallback(async () => {
@@ -207,9 +213,28 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         const locRes = await apiClient.locations.list();
         const locList = locRes.data || [];
 
-        const wh = locList.find((l: any) => l.category === "physical_warehouse" || l.category === "physical_office");
-        const ven = locList.find((l: any) => l.category === "virtual_vendor");
-        const cust = locList.find((l: any) => l.category === "virtual_customer");
+        const wh =
+          locList.find(
+            (l: any) =>
+              (l.category === "physical_warehouse" || l.category === "physical_office") &&
+              (l.name.includes("Main") || l.name.includes("Store") || l.name.includes("Floor"))
+          ) ||
+          locList.find((l: any) => l.category === "physical_warehouse" || l.category === "physical_office");
+
+        const ven =
+          locList.find(
+            (l: any) =>
+              l.category === "virtual_vendor" &&
+              (l.name.includes("External") || l.name.includes("Supply") || l.name.includes("Vendor"))
+          ) || locList.find((l: any) => l.category === "virtual_vendor");
+
+        const cust =
+          locList.find(
+            (l: any) =>
+              l.category === "virtual_customer" &&
+              (l.name.includes("Delivery") || l.name.includes("Customer"))
+          ) || locList.find((l: any) => l.category === "virtual_customer");
+
         const scr = locList.find((l: any) => l.category === "virtual_scrap");
 
         if (wh) currentLocs.warehouseId = wh.location_id;
@@ -219,11 +244,11 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
         // If any locations are missing in the DB, create them automatically
         if (!wh) {
-          const createdWh = await apiClient.locations.create({ name: "Main Storage Warehouse", category: "physical_warehouse" });
+          const createdWh = await apiClient.locations.create({ name: "Main Floor / Active Store", category: "physical_warehouse" });
           if (createdWh.data?.location_id) currentLocs.warehouseId = createdWh.data.location_id;
         }
         if (!ven) {
-          const createdVen = await apiClient.locations.create({ name: "Vendors Virtual Supply", category: "virtual_vendor" });
+          const createdVen = await apiClient.locations.create({ name: "External Vendors (Virtual)", category: "virtual_vendor" });
           if (createdVen.data?.location_id) currentLocs.vendorId = createdVen.data.location_id;
         }
         if (!cust) {
@@ -251,32 +276,38 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         itemsList = searchRes.data || [];
       }
 
-      // D. For each product, fetch live on-hand balance from PostgreSQL Two-Sided Ledger
-      const populatedProducts: Product[] = await Promise.all(
-        itemsList.map(async (item: any) => {
-          let balance = 0;
-          try {
-            const balRes = await apiClient.stock.getBalance(currentLocs.warehouseId, item.item_id);
-            balance = balRes.data?.balance || 0;
-          } catch {
-            balance = 0;
-          }
+      // D. Map products with live 6-Bucket Office IT Lifecycle balances from PostgreSQL
+      const populatedProducts: Product[] = itemsList.map((item: any) => {
+        const attrs = item.attributes || {};
+        const onHand = Number(item.total_on_hand !== undefined ? item.total_on_hand : item.current_stock) || 0;
+        const assigned = Number(item.assigned_count) || 0;
+        const faulty = Number(item.faulty_count) || 0;
+        const inRepair = Number(item.in_repair_count) || 0;
+        const repaired = Number(item.repaired_count) || 0;
+        const scrapped = Number(item.scrapped_count) || 0;
+        const totalOwned = Number(item.total_owned !== undefined ? item.total_owned : onHand + assigned + faulty + inRepair) || onHand;
 
-          const attrs = item.attributes || {};
-          return {
-            id: item.item_id,
-            sku: item.sku,
-            name: item.name,
-            category: item.category_name || attrs.category || "General",
-            cost: Number(item.cost_price ?? attrs.cost_price) || 0,
-            price: Number(item.selling_price ?? attrs.selling_price) || 0,
-            currentStock: balance,
-            reorderLevel: Number(item.reorder_level ?? attrs.reorder_level) || 5,
-            unit: item.base_uom || "unit",
-            updatedAt: item.updated_at || item.created_at || new Date().toISOString(),
-          };
-        })
-      );
+        return {
+          id: item.item_id,
+          sku: item.sku,
+          name: item.name,
+          category: item.category_name || attrs.category || "IT Hardware",
+          cost: Number(item.cost_price ?? attrs.cost_price) || 0,
+          price: Number(item.selling_price ?? attrs.selling_price) || 0,
+          currentStock: onHand,
+          assignedCount: assigned,
+          faultyCount: faulty,
+          inRepairCount: inRepair,
+          repairedCount: repaired,
+          scrappedCount: scrapped,
+          totalOwned,
+          reorderLevel: Number(item.reorder_level ?? attrs.reorder_level) || 5,
+          unit: item.base_uom || "unit",
+          barcode: item.barcode || attrs.barcode || item.sku,
+          attributes: attrs,
+          updatedAt: item.updated_at || item.created_at || new Date().toISOString(),
+        };
+      });
 
       setProducts(populatedProducts);
 
@@ -285,17 +316,27 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         const movesRes = await apiClient.stock.listMoves({ limit: 100 });
         const movesList = movesRes.data || [];
 
+        const inTypes = ["INWARD_RECEIPT", "inward", "receipt", "INWARD_PURCHASE", "IN", "RECEIPT"];
+        const outTypes = ["RETAIL_SALE", "outward", "RESERVATION_FULFILLMENT", "OUT", "DISPATCH"];
+
         const parsedMovements: StockMovement[] = movesList.map((m: any) => {
-          let type: "IN" | "OUT" | "ADJUSTMENT" = "IN";
-          if (m.move_type === "INWARD_RECEIPT") {
+          let type: "IN" | "OUT" | "ADJUSTMENT" = "ADJUSTMENT";
+          if (inTypes.includes(m.move_type)) {
             type = "IN";
-          } else if (m.move_type === "RETAIL_SALE") {
+          } else if (outTypes.includes(m.move_type)) {
             type = "OUT";
           } else {
             type = "ADJUSTMENT";
           }
 
           const matchedProd = populatedProducts.find((p) => p.id === m.item_id);
+          const isNegativeAdj =
+            type === "ADJUSTMENT" &&
+            (m.to_location_id === currentLocs.scrapId ||
+              String(m.move_type).toLowerCase().includes("scrap") ||
+              String(m.move_type).toLowerCase().includes("loss"));
+          const adjReason = m.usage_target || "Cycle Count Discrepancy";
+          const finalQty = isNegativeAdj ? -Math.abs(m.quantity) : m.quantity;
 
           return {
             id: m.move_id,
@@ -303,11 +344,12 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
             productId: m.item_id,
             productName: matchedProd?.name || "Product " + m.item_id.slice(0, 8),
             sku: matchedProd?.sku || m.item_id.slice(0, 8),
-            quantity: m.quantity,
+            quantity: finalQty,
             previousStock: 0,
             newStock: m.quantity,
             reference: m.reference_code || "MOV-" + m.move_id.slice(0, 6),
-            partyName: type === "IN" ? "Vendor Delivery" : type === "OUT" ? "Customer Order" : "Audit Discrepancy",
+            partyName: m.usage_target || (type === "IN" ? "Vendor Delivery" : type === "OUT" ? "Customer Order" : "Audit Discrepancy"),
+            reason: type === "ADJUSTMENT" ? adjReason : undefined,
             timestamp: m.created_at || new Date().toISOString(),
           };
         });
@@ -316,16 +358,23 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       } catch (moveErr) {
         console.warn("Could not fetch stock moves:", moveErr);
       }
+
+      try {
+        await loadDirectory();
+      } catch (dirErr) {
+        console.warn("Could not fetch staff and vendors:", dirErr);
+      }
     } catch (err: any) {
       setError(err?.message || "Failed to connect to Go Backend");
       setIsBackendConnected(false);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [loadDirectory]);
 
   useEffect(() => {
-    // Whenever active tenant changes, wipe in-memory products and movements immediately
+    // Mark loading BEFORE clearing so dashboards never flash a false "empty catalog".
+    setIsLoading(true);
     setProducts([]);
     setMovements([]);
     fetchBackendData();
@@ -333,11 +382,19 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
   // Metrics
   const totalProductsCount = products.length;
+  const totalOwnedUnits = products.reduce((sum, p) => sum + p.totalOwned, 0);
+  const totalInStoreUnits = products.reduce((sum, p) => sum + p.currentStock, 0);
+  const totalAssignedUnits = products.reduce((sum, p) => sum + p.assignedCount, 0);
+  const totalFaultyUnits = products.reduce((sum, p) => sum + p.faultyCount, 0);
+  const totalInRepairUnits = products.reduce((sum, p) => sum + p.inRepairCount, 0);
+  const totalRepairedUnits = products.reduce((sum, p) => sum + p.repairedCount, 0);
   const totalInventoryValuation = products.reduce(
-    (sum, p) => sum + p.currentStock * p.cost,
+    (sum, p) => sum + p.totalOwned * p.cost,
     0
   );
-  const lowStockItems = products.filter((p) => p.currentStock <= p.reorderLevel);
+  const lowStockItems = products.filter(
+    (p) => p.reorderLevel > 0 && p.currentStock <= p.reorderLevel
+  );
 
   // ---------------------------------------------------------------------------
   // Action 1: Add Product (POST /api/v1/items)
@@ -351,41 +408,65 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     currentStock: number;
     reorderLevel: number;
     unit?: string;
+    barcode?: string;
+    attributes?: Record<string, any>;
   }): Promise<{ success: boolean; error?: string }> => {
     try {
-      const payload = {
+      const barcodeValue = productData.barcode?.trim() || productData.sku.trim().toUpperCase();
+      const payload: any = {
         sku: productData.sku.trim().toUpperCase(),
         name: productData.name.trim(),
         tracking_mode: "none",
         base_uom: productData.unit || "unit",
         valuation_method: "fifo",
+        barcode: barcodeValue,
+        cost_price: Number(productData.cost) || 0,
+        selling_price: Number(productData.price) || 0,
+        reorder_level: Number(productData.reorderLevel) || 5,
         attributes: {
+          barcode: barcodeValue,
           cost_price: Number(productData.cost) || 0,
           selling_price: Number(productData.price) || 0,
           reorder_level: Number(productData.reorderLevel) || 5,
           category: productData.category.trim() || "General",
+          ...(productData.attributes || {}),
         },
       };
 
       const res = await apiClient.items.create(payload);
       const createdItem = res.data;
 
-      // If initial stock was provided, immediately execute a two-sided INWARD_RECEIPT move
+      // If initial stock was provided, execute an inward stock move
       if (productData.currentStock > 0 && createdItem?.item_id) {
-        await apiClient.stock.createMove({
-          item_id: createdItem.item_id,
-          from_location_id: locations.vendorId,
-          to_location_id: locations.warehouseId,
-          quantity: productData.currentStock,
-          move_type: "INWARD_RECEIPT",
-          reference_code: `INIT-${productData.sku}`,
-        });
+        try {
+          const fromLoc = locations.vendorId || "00000000-0000-0000-0000-000000000001";
+          const toLoc = locations.warehouseId || "00000000-0000-0000-0000-000000000002";
+          await apiClient.stock.createMove({
+            item_id: createdItem.item_id,
+            from_location_id: fromLoc,
+            to_location_id: toLoc,
+            quantity: productData.currentStock,
+            move_type: "INWARD_RECEIPT",
+            reference_code: `INIT-${productData.sku}`,
+          });
+        } catch (stockErr) {
+          console.warn("Initial stock allocation move warning (product was created):", stockErr);
+        }
       }
 
       await fetchBackendData();
       return { success: true };
     } catch (err: any) {
-      const msg = err instanceof ApiError ? err.problem.detail || err.message : err?.message || "Failed to create product";
+      let msg = "Failed to create product";
+      if (err instanceof ApiError) {
+        if (err.problem?.errors && Array.isArray(err.problem.errors) && err.problem.errors.length > 0) {
+          msg = err.problem.errors.map((e: any) => e.message || `${e.field}: invalid`).join("; ");
+        } else {
+          msg = err.problem?.detail || err.problem?.title || err.message;
+        }
+      } else if (err?.message) {
+        msg = err.message;
+      }
       return { success: false, error: msg };
     }
   };
@@ -413,6 +494,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         move_type: "INWARD_RECEIPT",
         reference_code: data.reference,
         idempotency_key: `IN-${data.reference}-${Date.now()}`,
+        usage_target: data.supplierName,
+        unit_cost: data.unitCost,
       });
 
       await fetchBackendData();
@@ -446,6 +529,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         move_type: "RETAIL_SALE",
         reference_code: data.reference,
         idempotency_key: `OUT-${data.reference}-${Date.now()}`,
+        usage_target: data.customerName,
+        unit_cost: data.unitPrice,
       });
 
       await fetchBackendData();
@@ -489,6 +574,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           quantity: diff,
           move_type: "INVENTORY_ADJUSTMENT",
           reference_code: data.reference,
+          usage_target: data.reason,
         });
       } else {
         // Decrease stock: Transfer from Warehouse to Virtual Scrap/Loss
@@ -500,6 +586,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           quantity: deductQty,
           move_type: "INVENTORY_ADJUSTMENT",
           reference_code: data.reference,
+          usage_target: data.reason,
         });
       }
 
@@ -511,35 +598,153 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateProduct = (id: string, updated: Partial<Product>) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, ...updated, updatedAt: new Date().toISOString() } : p))
-    );
-  };
-
-  const deleteProduct = (id: string) => {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
-  };
-
-  const addContact = (data: Omit<Contact, "id">) => {
-    const newContact: Contact = { ...data, id: "cont-" + Date.now() };
-    setContacts((prev) => {
-      const next = [newContact, ...prev];
-      if (typeof window !== "undefined") {
-        localStorage.setItem(`whoopit_contacts_${getTenantOrgId()}`, JSON.stringify(next));
+  const updateProduct = async (
+    id: string,
+    updated: Partial<Product>
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const payload: any = {};
+      if (updated.sku) payload.sku = updated.sku.trim().toUpperCase();
+      if (updated.name) payload.name = updated.name.trim();
+      if (updated.unit) payload.base_uom = updated.unit.trim();
+      if (updated.barcode) payload.barcode = updated.barcode.trim();
+      if (updated.cost !== undefined) payload.cost_price = Number(updated.cost) || 0;
+      if (updated.price !== undefined) payload.selling_price = Number(updated.price) || 0;
+      if (updated.reorderLevel !== undefined) payload.reorder_level = Number(updated.reorderLevel) || 0;
+      if (updated.attributes || updated.category) {
+        payload.attributes = {
+          ...(updated.attributes || {}),
+          category: updated.category || "General",
+        };
       }
-      return next;
-    });
+
+      await apiClient.items.update(id, payload);
+      await fetchBackendData();
+      return { success: true };
+    } catch (err: any) {
+      const msg = err instanceof ApiError ? err.problem.detail || err.message : err?.message || "Failed to update product";
+      return { success: false, error: msg };
+    }
   };
 
-  const deleteContact = (id: string) => {
-    setContacts((prev) => {
-      const next = prev.filter((c) => c.id !== id);
-      if (typeof window !== "undefined") {
-        localStorage.setItem(`whoopit_contacts_${getTenantOrgId()}`, JSON.stringify(next));
+  const deleteProduct = async (id: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await apiClient.items.delete(id);
+      await fetchBackendData();
+      return { success: true };
+    } catch (err: any) {
+      const msg = err instanceof ApiError ? err.problem.detail || err.message : err?.message || "Failed to delete product";
+      return { success: false, error: msg };
+    }
+  };
+
+  const directoryError = (err: any, fallback: string) =>
+    err instanceof ApiError ? err.problem.detail || err.message : err?.message || fallback;
+
+  const addContact = async (data: Omit<Contact, "id">) => {
+    try {
+      if (data.type === "CUSTOMER") {
+        const email = data.email.trim();
+        if (!email) {
+          return { success: false, error: "Office staff need an email so they can sign in." };
+        }
+        const created = await apiClient.users.create({
+          name: data.name.trim(),
+          email,
+          password: STAFF_SIGN_IN_PASSWORD,
+          role: "staff",
+          employee_code: data.employeeCode || "",
+          department: data.department || data.company || "",
+          desk_location: data.deskLocation || data.address || "",
+          send_invite_mail: true,
+        });
+        await loadDirectory();
+        const mailNote = created.data?.invite_email_sent
+          ? " Invite email sent (check Mailpit)."
+          : "";
+        return {
+          success: true,
+          notice: `${data.name.trim()} can sign in with ${email} and password ${STAFF_SIGN_IN_PASSWORD}.${mailNote}`,
+        };
       }
-      return next;
-    });
+
+      await apiClient.suppliers.create({
+        name: data.name.trim(),
+        phone: data.phone,
+        email: data.email,
+        address: data.address,
+        notes: data.company || "",
+      });
+      await loadDirectory();
+      return { success: true, notice: `${data.name.trim()} is saved in the company vendor list.` };
+    } catch (err: any) {
+      return { success: false, error: directoryError(err, "Could not save the directory record") };
+    }
+  };
+
+  const updateContact = async (id: string, updated: Partial<Contact>) => {
+    const existing = contacts.find((contact) => contact.id === id);
+    if (!existing) {
+      return { success: false, error: "That directory record is no longer available." };
+    }
+    if (updated.type && updated.type !== existing.type) {
+      return { success: false, error: "Create a new record to change a vendor into staff, or the other way around." };
+    }
+
+    try {
+      if (existing.type === "CUSTOMER") {
+        const email = (updated.email ?? existing.email).trim();
+        const name = (updated.name ?? existing.name).trim();
+        if (!email) {
+          return { success: false, error: "Office staff need an email so they can sign in." };
+        }
+        await apiClient.users.update(id, {
+          name,
+          email,
+          is_active: true,
+          employee_code: updated.employeeCode ?? existing.employeeCode ?? "",
+          department: updated.department ?? updated.company ?? existing.department ?? existing.company ?? "",
+          desk_location: updated.deskLocation ?? updated.address ?? existing.deskLocation ?? existing.address ?? "",
+        });
+        await loadDirectory();
+        return { success: true, notice: "Staff directory fields are saved on the sign-in account." };
+      }
+
+      await apiClient.suppliers.update(id, {
+        name: (updated.name ?? existing.name).trim(),
+        phone: updated.phone ?? existing.phone,
+        email: updated.email ?? existing.email,
+        address: updated.address ?? existing.address,
+        notes: updated.company ?? existing.company ?? "",
+      });
+      await loadDirectory();
+      return { success: true, notice: `${updated.name || existing.name} is updated in the vendor list.` };
+    } catch (err: any) {
+      return { success: false, error: directoryError(err, "Could not update the directory record") };
+    }
+  };
+
+  const deleteContact = async (id: string) => {
+    const existing = contacts.find((contact) => contact.id === id);
+    if (!existing) {
+      return { success: false, error: "That directory record is no longer available." };
+    }
+    if (existing.type === "CUSTOMER" && user?.id === id) {
+      return { success: false, error: "You cannot deactivate the account you are signed in with." };
+    }
+
+    try {
+      if (existing.type === "CUSTOMER") {
+        await apiClient.users.update(id, { is_active: false });
+        await loadDirectory();
+        return { success: true, notice: `${existing.name} can no longer sign in. Past custody records stay in place.` };
+      }
+      await apiClient.suppliers.remove(id);
+      await loadDirectory();
+      return { success: true, notice: `${existing.name} was removed from the vendor list.` };
+    } catch (err: any) {
+      return { success: false, error: directoryError(err, "Could not remove the directory record") };
+    }
   };
 
 
@@ -620,6 +825,12 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         error,
         totalProductsCount,
         totalInventoryValuation,
+        totalOwnedUnits,
+        totalInStoreUnits,
+        totalAssignedUnits,
+        totalFaultyUnits,
+        totalInRepairUnits,
+        totalRepairedUnits,
         lowStockItems,
         addProduct,
         updateProduct,
@@ -628,6 +839,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         stockOut,
         adjustStock,
         addContact,
+        updateContact,
         deleteContact,
         refetch: fetchBackendData,
         resetToDefaults,

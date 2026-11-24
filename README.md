@@ -70,7 +70,7 @@ Whoopit IMS is engineered around clean domain separation, high-throughput financ
 
 ## 🔑 Pre-Seeded Demo Credentials
 
-The platform includes pre-configured demo accounts with 1-click quick-fill buttons on the login screen (`http://localhost:3000/login`):
+The platform includes pre-configured demo accounts with 1-click quick-fill buttons on the login screen (`http://localhost:3100/login`):
 
 | Role | Email Address | Password | Permissions & Scope |
 | :--- | :--- | :--- | :--- |
@@ -96,7 +96,7 @@ docker compose ps
 ```
 
 Once started:
-* **Web Application**: [http://localhost:3000](http://localhost:3000)
+* **Web Application**: [http://localhost:3100](http://localhost:3100)
 * **Backend Core API**: [http://localhost:8080](http://localhost:8080)
 * **OpenAPI Documentation**: [http://localhost:8080/swagger](http://localhost:8080/swagger)
 * **Health & Probes**: [http://localhost:8080/healthz](http://localhost:8080/healthz) and [http://localhost:8080/readyz](http://localhost:8080/readyz)

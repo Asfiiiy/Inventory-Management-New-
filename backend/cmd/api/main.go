@@ -25,6 +25,7 @@ import (
 	"whoopit-core/internal/platform/config"
 	"whoopit-core/internal/platform/database"
 	platformHttp "whoopit-core/internal/platform/http"
+	"whoopit-core/internal/platform/jobs"
 )
 
 func main() {
@@ -95,11 +96,15 @@ func main() {
 	router := platformHttp.NewRouter(logger)
 	auth.RegisterRoutes(router, tenantDB)
 	catalog.RegisterRoutes(router, tenantDB, schemaValidator)
-	inventory.RegisterRoutes(router, tenantDB)
+	invHandler := inventory.RegisterRoutes(router, tenantDB)
 	custody.RegisterRoutes(router, tenantDB, moveSvc, valkeyClient)
 	warehouse.RegisterRoutes(router, tenantDB, moveSvc)
 	retail.RegisterRoutes(router, tenantDB, moveSvc)
 	superadmin.RegisterRoutes(router, tenantDB)
+
+	scheduler := jobs.NewScheduler(pool, invHandler)
+	scheduler.Start()
+	defer scheduler.Stop()
 
 	// Readiness probes for Kubernetes / Docker orchestrators
 	platformHttp.RegisterReadinessRoute(router, map[string]platformHttp.ReadinessCheckFunc{

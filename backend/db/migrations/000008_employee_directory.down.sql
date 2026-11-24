@@ -1,0 +1,3 @@
+ALTER TABLE users DROP COLUMN IF EXISTS desk_location;
+ALTER TABLE users DROP COLUMN IF EXISTS department;
+ALTER TABLE users DROP COLUMN IF EXISTS employee_code;

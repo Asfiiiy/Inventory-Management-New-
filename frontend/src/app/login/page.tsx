@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Boxes,
   Mail,
@@ -11,21 +11,29 @@ import {
   ShieldCheck,
   Loader2,
   AlertCircle,
-  TrendingUp,
-  Sparkles,
-  Server,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { apiClient, clearAuthToken } from "@/lib/api";
 
 export default function LoginPage() {
-  const { login, isLoading } = useAuth();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [infoMsg, setInfoMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const err = params.get("error");
+      if (err) setErrorMsg(err);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +41,15 @@ export default function LoginPage() {
     setSubmitting(true);
 
     try {
-      await login(email.trim(), password);
+      const params =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search)
+          : null;
+      const next = params?.get("next") || undefined;
+      await login(email.trim(), password, {
+        rememberMe,
+        redirectTo: next || undefined,
+      });
     } catch (err: any) {
       console.error("Auth error:", err);
       const detail =
@@ -54,30 +70,15 @@ export default function LoginPage() {
       {/* ========================================================= */}
       
       {/* Soft Ambient Colorful Blurred Orbs */}
-      <div className="absolute -top-24 -left-24 w-[480px] h-[480px] bg-teal-400/25 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute -top-20 -right-20 w-[450px] h-[450px] bg-indigo-400/20 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute -bottom-28 left-1/4 w-[520px] h-[440px] bg-[#0c3843]/18 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute -bottom-20 -right-16 w-[400px] h-[400px] bg-cyan-400/20 rounded-full blur-[90px] pointer-events-none" />
-
-      {/* Subtle Architectural Dot Matrix Overlay */}
+      <div className="absolute -top-24 -left-24 w-[480px] h-[480px] bg-teal-400/20 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute -bottom-28 right-0 w-[520px] h-[440px] bg-[#0c3843]/15 rounded-full blur-[100px] pointer-events-none" />
       <div
-        className="absolute inset-0 pointer-events-none opacity-45 [mask-image:radial-gradient(ellipse_75%_75%_at_50%_50%,#000_65%,transparent_100%)]"
+        className="absolute inset-0 pointer-events-none opacity-30 [mask-image:radial-gradient(ellipse_75%_75%_at_50%_50%,#000_65%,transparent_100%)]"
         style={{
           backgroundImage: "radial-gradient(#0c3843 0.9px, transparent 0.9px)",
           backgroundSize: "22px 22px",
         }}
       />
-
-      {/* Floating Ambient Micro Badges in Background */}
-      <div className="hidden xl:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/70 border border-white/80 shadow-sm backdrop-blur-md text-[11px] font-semibold text-[#0c3843] absolute top-7 left-10 pointer-events-none animate-in fade-in duration-500">
-        <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-        <span>Enterprise Multi-Tenant Engine</span>
-      </div>
-
-      <div className="hidden xl:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/70 border border-white/80 shadow-sm backdrop-blur-md text-[11px] font-semibold text-[#0c3843] absolute bottom-7 right-10 pointer-events-none animate-in fade-in duration-500">
-        <Server className="w-3.5 h-3.5 text-cyan-600" />
-        <span>99.99% Uptime SLA &bull; Double-Entry Stock Ledger</span>
-      </div>
 
       {/* ========================================================= */}
       {/* MAIN FLOATING CARD WRAPPER WITH SOFT COLORED HALO GLOW   */}
@@ -92,199 +93,42 @@ export default function LoginPage() {
           {/* ======================================================= */}
           {/* LEFT COLUMN: Deep Petrol Teal Showcase Panel            */}
           {/* ======================================================= */}
-          <div className="lg:w-1/2 bg-[#0c3843] p-6 sm:p-8 lg:p-9 flex flex-col justify-between relative overflow-hidden text-white order-2 lg:order-1">
-            
-            {/* Geometric Floating Cubes (Top Left) */}
-            <div className="absolute top-3 left-3 flex flex-col gap-2 opacity-25 pointer-events-none">
-              <div className="flex gap-2">
-                <div className="w-7 h-7 rounded-lg bg-white/40" />
-                <div className="w-5 h-5 rounded-md bg-white/30" />
-                <div className="w-3.5 h-3.5 rounded-sm bg-white/20" />
+          <div className="lg:w-1/2 bg-[#0c3843] p-8 sm:p-10 lg:p-12 flex flex-col justify-between relative overflow-hidden text-white order-2 lg:order-1">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(34,211,238,0.18),transparent_55%)] pointer-events-none" />
+
+            <div className="relative z-10 flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center">
+                <Boxes className="w-5 h-5 text-cyan-300" />
               </div>
-              <div className="flex gap-2 pl-3">
-                <div className="w-4 h-4 rounded-md bg-white/30" />
-                <div className="w-5 h-5 rounded-md bg-white/20" />
+              <div>
+                <div className="text-lg font-extrabold tracking-tight">Whoopit</div>
+                <div className="text-[11px] text-cyan-200/80">Office IT Asset Platform</div>
               </div>
             </div>
 
-            {/* Geometric Floating Cubes (Bottom Right) */}
-            <div className="absolute bottom-4 right-4 flex flex-col gap-1.5 opacity-20 pointer-events-none">
-              <div className="flex gap-1.5 justify-end">
-                <div className="w-6 h-6 rounded-md bg-white/20" />
-                <div className="w-4 h-4 rounded-sm bg-white/30" />
-              </div>
-              <div className="flex gap-1.5 justify-end pr-2.5">
-                <div className="w-5 h-5 rounded-md bg-white/25" />
-                <div className="w-3.5 h-3.5 rounded-sm bg-white/40" />
-              </div>
-            </div>
-
-            {/* Top Pill / Status Tag */}
-            <div className="relative z-10 flex items-center justify-between">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-cyan-200 text-xs font-semibold backdrop-blur-md">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Real-Time Inventory Engine</span>
-              </span>
-
-              <span className="text-[10px] font-mono text-cyan-200/60 hidden sm:inline-block">
-                PostgreSQL 18 RLS
-              </span>
-            </div>
-
-            {/* Centerpiece: Floating Analytics & Donut KPI Cards */}
-            <div className="relative z-10 my-4 sm:my-auto max-w-sm sm:max-w-md mx-auto w-full">
-              {/* Main Analytics Card */}
-              <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-[0_15px_40px_rgba(0,0,0,0.22)] text-slate-800 border border-white/50 relative">
-                
-                {/* Header */}
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs sm:text-sm font-bold text-slate-900">
-                      Analytics
-                    </span>
-                    <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <TrendingUp className="w-3 h-3" />
-                      +18.4%
-                    </span>
-                  </div>
-
-                  {/* Period Pills */}
-                  <div className="flex items-center p-0.5 bg-slate-100 rounded-lg text-[10px] font-semibold text-slate-500">
-                    <span className="px-2 py-0.5 bg-white text-slate-900 rounded-md shadow-2xs">
-                      Weekly
-                    </span>
-                    <span className="px-2 py-0.5 hover:text-slate-800 cursor-pointer">
-                      Monthly
-                    </span>
-                    <span className="px-2 py-0.5 hover:text-slate-800 cursor-pointer">
-                      Yearly
-                    </span>
-                  </div>
-                </div>
-
-                {/* Multi-line Trend SVG Chart */}
-                <div className="h-20 sm:h-24 w-full pt-1">
-                  <svg viewBox="0 0 320 80" className="w-full h-full overflow-visible">
-                    <defs>
-                      <linearGradient id="gradientCyan" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#0c3843" stopOpacity="0.22" />
-                        <stop offset="100%" stopColor="#0c3843" stopOpacity="0.0" />
-                      </linearGradient>
-                      <linearGradient id="gradientAmber" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.18" />
-                        <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.0" />
-                      </linearGradient>
-                    </defs>
-
-                    {/* Guide Lines */}
-                    <line x1="0" y1="15" x2="320" y2="15" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
-                    <line x1="0" y1="40" x2="320" y2="40" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
-                    <line x1="0" y1="65" x2="320" y2="65" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3 3" />
-
-                    {/* Area 1: Inflow */}
-                    <path
-                      d="M 0,60 Q 40,30 80,45 T 160,22 T 240,35 T 320,15 L 320,80 L 0,80 Z"
-                      fill="url(#gradientCyan)"
-                    />
-                    {/* Line 1 */}
-                    <path
-                      d="M 0,60 Q 40,30 80,45 T 160,22 T 240,35 T 320,15"
-                      fill="none"
-                      stroke="#0c3843"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                    />
-
-                    {/* Line 2 */}
-                    <path
-                      d="M 0,70 Q 40,55 80,35 T 160,42 T 240,24 T 320,32"
-                      fill="none"
-                      stroke="#06b6d4"
-                      strokeWidth="2"
-                      strokeDasharray="4 4"
-                      strokeLinecap="round"
-                    />
-
-                    {/* Dot */}
-                    <circle cx="240" cy="35" r="4" fill="#0c3843" stroke="#ffffff" strokeWidth="2" />
-                  </svg>
-                </div>
-
-                {/* Days */}
-                <div className="flex items-center justify-between text-[9px] font-semibold text-slate-400 mt-1 px-1">
-                  <span>MON</span>
-                  <span>TUE</span>
-                  <span>WED</span>
-                  <span>THU</span>
-                  <span>FRI</span>
-                  <span>SAT</span>
-                </div>
-              </div>
-
-              {/* Overlapping Donut Card */}
-              <div className="absolute -bottom-6 -right-2 sm:-right-4 w-32 sm:w-40 bg-white rounded-2xl p-2.5 sm:p-3 shadow-[0_15px_35px_rgba(0,0,0,0.22)] border border-white/60 text-slate-800">
-                <div className="flex items-center justify-between mb-0.5">
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
-                    Stock Health
-                  </span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                </div>
-
-                <div className="flex items-center gap-2.5">
-                  <div className="relative w-10 h-10 flex-shrink-0 flex items-center justify-center">
-                    <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                      <circle
-                        cx="18"
-                        cy="18"
-                        r="14"
-                        fill="none"
-                        stroke="#e2e8f0"
-                        strokeWidth="3.5"
-                      />
-                      <circle
-                        cx="18"
-                        cy="18"
-                        r="14"
-                        fill="none"
-                        stroke="#0c3843"
-                        strokeWidth="3.8"
-                        strokeDasharray="88, 100"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <span className="absolute text-[9px] font-extrabold text-slate-800">
-                      94%
-                    </span>
-                  </div>
-
-                  <div className="space-y-0.2">
-                    <span className="text-[11px] font-bold text-slate-900 block leading-tight">
-                      Optimized
-                    </span>
-                    <span className="text-[9px] text-slate-400 block leading-tight">
-                      0-Variance
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom Caption */}
-            <div className="relative z-10 pt-4 space-y-1.5 text-center lg:text-left">
-              <h2 className="text-base sm:text-lg font-bold tracking-tight text-white">
-                Very simple way you can manage
+            <div className="relative z-10 my-10 lg:my-auto space-y-4 max-w-sm">
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white leading-tight">
+                Hardware. Staff. Signatures.
               </h2>
-              <p className="text-[11px] text-slate-300 leading-snug max-w-xs">
-                Welcome to Whoopit Inventory Management System! Efficiently track, audit, and dispatch multi-store stock with ease.
+              <p className="text-sm text-cyan-100/75 leading-relaxed">
+                Issue laptops and monitors with e-sign handovers, track repairs, and keep finance book value in one workspace.
               </p>
-
-              {/* Dots */}
-              <div className="flex items-center justify-center lg:justify-start gap-1.5 pt-1">
-                <span className="w-5 h-1.5 rounded-full bg-white transition-all" />
-                <span className="w-1.5 h-1.5 rounded-full bg-white/40" />
-                <span className="w-1.5 h-1.5 rounded-full bg-white/40" />
+              <div className="flex flex-wrap gap-2 pt-1 text-[11px] font-semibold text-cyan-100/90">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/15">
+                  <ShieldCheck className="w-3.5 h-3.5" /> e-Sign custody
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/15">
+                  Vendor repairs
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/15">
+                  Finance NBV
+                </span>
               </div>
             </div>
+
+            <p className="relative z-10 text-[11px] text-cyan-200/50">
+              Multi-tenant · company workspaces · staff &amp; admin roles
+            </p>
           </div>
 
           {/* ======================================================= */}
@@ -389,15 +233,38 @@ export default function LoginPage() {
                     </span>
                   </label>
 
-                  <span className="text-[10px] text-slate-400 font-medium">
-                    RLS Protected
-                  </span>
+                  <button
+                    type="button"
+                    disabled={resetting || !email.trim()}
+                    onClick={async () => {
+                      setErrorMsg(null);
+                      setInfoMsg(null);
+                      setResetting(true);
+                      try {
+                        const res = await apiClient.auth.forgotPassword(email.trim());
+                        setInfoMsg(res.data?.message || "If the account exists, a temporary password was emailed (check Mailpit :8025).");
+                      } catch (err: any) {
+                        setErrorMsg(err?.problem?.detail || err?.message || "Could not start password reset.");
+                      } finally {
+                        setResetting(false);
+                      }
+                    }}
+                    className="text-[11px] font-bold text-[#0c3843] hover:underline disabled:opacity-50 cursor-pointer"
+                  >
+                    {resetting ? "Sending…" : "Forgot password?"}
+                  </button>
                 </div>
+
+                {infoMsg && (
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 text-[11px] p-2.5">
+                    {infoMsg}
+                  </div>
+                )}
 
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={submitting || isLoading}
+                  disabled={submitting}
                   className="w-full mt-2 py-3 px-4 rounded-xl bg-[#0c3843] hover:bg-[#082931] active:bg-[#062026] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#0c3843]/20 hover:shadow-lg hover:shadow-[#0c3843]/25 flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submitting ? (
@@ -412,6 +279,29 @@ export default function LoginPage() {
                     </>
                   )}
                 </button>
+
+                {/* Dev/local quick fill — hidden on real production hosts */}
+                {(process.env.NODE_ENV !== "production" ||
+                  (typeof window !== "undefined" &&
+                    (window.location.hostname === "localhost" ||
+                      window.location.hostname === "127.0.0.1"))) && (
+                  <div className="pt-2 flex flex-col gap-1.5 text-[11px]">
+                    <span className="text-slate-400 font-medium">Quick Fill:</span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEmail("admin@whoopit.io");
+                          setPassword("Password123!");
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-[11px] transition-colors cursor-pointer border border-teal-200"
+                        title="Whoopit Master Admin — software vendor portal"
+                      >
+                        Whoopit Admin
+                      </button>
+                    </div>
+                  </div>
+                )}
               </form>
             </div>
 

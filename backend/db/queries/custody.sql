@@ -40,7 +40,7 @@ SELECT a.assignment_id, a.org_id, a.asset_id, a.assigned_to_user_id, a.checkout_
        i.sku AS asset_sku, i.name AS asset_name, i.attributes AS asset_attributes
 FROM asset_assignments a
 JOIN items i ON i.item_id = a.asset_id
-WHERE a.org_id = $1 AND a.assigned_to_user_id = $2 AND a.returned_at IS NULL
+WHERE a.org_id = $1 AND a.assigned_to_user_id = $2
 ORDER BY a.checkout_date DESC;
 
 -- name: GetCustodySummary :one

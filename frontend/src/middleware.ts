@@ -1,64 +1,78 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-function decodeJwtPayload(token: string): { role?: string; email?: string } | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const base64Url = parts[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
-    );
-    return JSON.parse(jsonPayload);
-  } catch {
-    return null;
-  }
+const PUBLIC_PATHS = new Set(["/login"]);
+
+/** Company Office IT pages that require company admin (not staff). */
+const COMPANY_ADMIN_PREFIXES = [
+  "/custody",
+  "/stock-in",
+  "/stock-out",
+  "/adjustments",
+  "/contacts",
+  "/import",
+  "/settings/custom-fields",
+];
+
+function isCompanyAdminPath(pathname: string) {
+  return COMPANY_ADMIN_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
 }
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const token = request.cookies.get("whoopit_auth_token")?.value;
-  const isLoginPage = pathname === "/login";
 
-  // 1. If user is unauthenticated and attempting to access any protected application route, redirect to /login
-  if (!token && !isLoginPage) {
+  if (pathname === "/") {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  const isPublic = PUBLIC_PATHS.has(pathname);
+  const token = request.cookies.get("whoopit_auth_token")?.value;
+  const role = request.cookies.get("whoopit_auth_role")?.value;
+
+  if (!isPublic && !token) {
     const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("error", "Please sign in to continue.");
+    loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // If unauthenticated and on login page, proceed
-  if (!token && isLoginPage) {
-    return NextResponse.next();
+  if (pathname.startsWith("/admin") || pathname.startsWith("/superadmin")) {
+    if (role !== "admin") {
+      const dest = role === "staff" ? "/my-assets" : "/dashboard";
+      return NextResponse.redirect(new URL(dest, request.url));
+    }
   }
 
-  // 2. Decode user identity from JWT
-  const payload = token ? decodeJwtPayload(token) : null;
-  const isMasterAdmin =
-    payload?.role === "superadmin" ||
-    payload?.email === "admin@whoopit.io";
-
-  // 3. If authenticated user visits /login, redirect directly to their respective portal
-  if (token && isLoginPage) {
-    const targetUrl = new URL(isMasterAdmin ? "/admin" : "/", request.url);
-    return NextResponse.redirect(targetUrl);
+  // Legacy /companies was Admin bleed
+  if (pathname.startsWith("/companies")) {
+    if (role === "admin") {
+      return NextResponse.redirect(new URL("/admin?tab=clients", request.url));
+    }
+    const dest = role === "staff" ? "/my-assets" : "/dashboard";
+    return NextResponse.redirect(new URL(dest, request.url));
   }
 
-  // 4. Role-based isolation:
-  // If Master Platform Admin (Hum) visits root `/`, route them to their Master Admin Control Room `/admin`
-  const isPreview = request.nextUrl.searchParams.get("preview") === "true";
-  if (token && isMasterAdmin && pathname === "/" && !isPreview) {
-    const adminUrl = new URL("/admin", request.url);
-    return NextResponse.redirect(adminUrl);
+  // Staff cannot open company-admin ops pages via URL
+  if (role === "staff" && isCompanyAdminPath(pathname)) {
+    return NextResponse.redirect(new URL("/my-assets", request.url));
   }
 
-  // 5. If client company (owner / staff / shopkeeper) attempts to visit `/admin`, block and redirect to store software `/`
-  if (token && !isMasterAdmin && pathname.startsWith("/admin")) {
-    const storeUrl = new URL("/", request.url);
-    return NextResponse.redirect(storeUrl);
+  if (isPublic && token) {
+    const next = request.nextUrl.searchParams.get("next");
+    if (
+      next &&
+      next.startsWith("/") &&
+      !next.startsWith("//") &&
+      !next.startsWith("/login") &&
+      !(role === "staff" && isCompanyAdminPath(next))
+    ) {
+      return NextResponse.redirect(new URL(next, request.url));
+    }
+    const dest =
+      role === "admin" ? "/admin" : role === "staff" ? "/my-assets" : "/dashboard";
+    return NextResponse.redirect(new URL(dest, request.url));
   }
 
   return NextResponse.next();
@@ -66,13 +80,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all application routes except:
-     * - api routes
-     * - _next static assets & images
-     * - favicon and common static file extensions
-     */
     "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
-

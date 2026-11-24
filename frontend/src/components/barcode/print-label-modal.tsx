@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Printer,
   X,
@@ -14,6 +14,8 @@ import {
 import { Product } from "@/lib/inventory-store";
 import { BarcodeView, QRCodeView } from "./barcode-view";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
+import { ModalPortal } from "@/components/ui/modal-portal";
 
 interface PrintLabelModalProps {
   product: Product | null;
@@ -22,13 +24,25 @@ interface PrintLabelModalProps {
 }
 
 export function PrintLabelModal({ product, isOpen, onClose }: PrintLabelModalProps) {
-  const [labelFormat, setLabelFormat] = useState<"thermal" | "a4-24" | "a4-30">("thermal");
+  const { user } = useAuth();
+  const thermalAllowed = (user?.org_plan || "").toLowerCase() === "enterprise";
+  const [labelFormat, setLabelFormat] = useState<"thermal" | "a4-24" | "a4-30">(
+    thermalAllowed ? "thermal" : "a4-24"
+  );
   const [copies, setCopies] = useState<number>(1);
   const [companyName, setCompanyName] = useState<string>("WHOOPIT IMS");
   const [showPrice, setShowPrice] = useState<boolean>(true);
   const [showQr, setShowQr] = useState<boolean>(false);
 
+  useEffect(() => {
+    if (!thermalAllowed && labelFormat === "thermal") {
+      setLabelFormat("a4-24");
+    }
+  }, [thermalAllowed, labelFormat]);
+
   if (!isOpen || !product) return null;
+
+  const barcodeValue = product.barcode || product.sku;
 
   const handlePrint = () => {
     window.print();
@@ -40,7 +54,8 @@ export function PrintLabelModal({ product, isOpen, onClose }: PrintLabelModalPro
   return (
     <>
       {/* Interactive Modal UI (Hidden during window.print) */}
-      <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150 no-print">
+      <ModalPortal>
+      <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-[100] animate-in fade-in duration-150 no-print">
         <div className="w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
           {/* Modal Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
@@ -53,7 +68,7 @@ export function PrintLabelModal({ product, isOpen, onClose }: PrintLabelModalPro
                   Print Barcode Labels
                 </h3>
                 <p className="text-[11px] text-slate-400">
-                  {product.name} &bull; <span className="font-mono">{product.sku}</span>
+                  {product.name} &bull; <span className="font-mono">SKU: {product.sku}</span> &bull; <span className="font-mono">Barcode: {barcodeValue}</span>
                 </p>
               </div>
             </div>
@@ -76,6 +91,7 @@ export function PrintLabelModal({ product, isOpen, onClose }: PrintLabelModalPro
                   Label Sheet Format
                 </label>
                 <div className="grid grid-cols-1 gap-1.5">
+                  {thermalAllowed && (
                   <button
                     type="button"
                     onClick={() => setLabelFormat("thermal")}
@@ -88,10 +104,11 @@ export function PrintLabelModal({ product, isOpen, onClose }: PrintLabelModalPro
                   >
                     <div>
                       <div className="font-bold">Single Thermal Sticker</div>
-                      <div className="text-[10px] text-slate-400 font-normal">50mm x 30mm (Roll Printer)</div>
+                      <div className="text-[10px] text-slate-400 font-normal">50mm x 30mm (Roll Printer) · Enterprise</div>
                     </div>
                     {labelFormat === "thermal" && <Check className="w-4 h-4 text-indigo-500" />}
                   </button>
+                  )}
 
                   <button
                     type="button"
@@ -228,7 +245,7 @@ export function PrintLabelModal({ product, isOpen, onClose }: PrintLabelModalPro
                 <div className="my-1.5 flex items-center justify-center gap-2 w-full">
                   <div className="flex-1 flex flex-col items-center">
                     <BarcodeView
-                      value={product.sku}
+                      value={barcodeValue}
                       width={1.4}
                       height={34}
                       fontSize={11}
@@ -237,7 +254,7 @@ export function PrintLabelModal({ product, isOpen, onClose }: PrintLabelModalPro
                   </div>
                   {showQr && (
                     <div className="shrink-0 p-1 bg-white border border-black/10 rounded">
-                      <QRCodeView value={product.sku} size={42} />
+                      <QRCodeView value={barcodeValue} size={42} />
                     </div>
                   )}
                 </div>
@@ -286,6 +303,7 @@ export function PrintLabelModal({ product, isOpen, onClose }: PrintLabelModalPro
           </div>
         </div>
       </div>
+      </ModalPortal>
 
       {/* =========================================================================
           PRINT ONLY CONTAINER (#printable-labels-area)
@@ -344,13 +362,13 @@ export function PrintLabelModal({ product, isOpen, onClose }: PrintLabelModalPro
                   }}
                 >
                   <BarcodeView
-                    value={product.sku}
+                    value={barcodeValue}
                     width={1.2}
                     height={28}
                     fontSize={9}
                     displayValue={true}
                   />
-                  {showQr && <QRCodeView value={product.sku} size={32} />}
+                  {showQr && <QRCodeView value={barcodeValue} size={32} />}
                 </div>
 
                 {/* Footer */}
@@ -363,7 +381,7 @@ export function PrintLabelModal({ product, isOpen, onClose }: PrintLabelModalPro
                     fontSize: "7pt",
                   }}
                 >
-                  <span>{product.sku}</span>
+                  <span>{barcodeValue !== product.sku ? `${product.sku} (${barcodeValue})` : product.sku}</span>
                   {showPrice && (
                     <span style={{ fontWeight: "bold", fontSize: "8pt" }}>
                       ${product.price.toFixed(2)}
@@ -431,13 +449,13 @@ export function PrintLabelModal({ product, isOpen, onClose }: PrintLabelModalPro
                   }}
                 >
                   <BarcodeView
-                    value={product.sku}
+                    value={barcodeValue}
                     width={1.1}
                     height={labelFormat === "a4-24" ? 26 : 20}
                     fontSize={8}
                     displayValue={true}
                   />
-                  {showQr && <QRCodeView value={product.sku} size={28} />}
+                  {showQr && <QRCodeView value={barcodeValue} size={28} />}
                 </div>
 
                 <div
@@ -449,7 +467,7 @@ export function PrintLabelModal({ product, isOpen, onClose }: PrintLabelModalPro
                     fontSize: "6.5pt",
                   }}
                 >
-                  <span>{product.sku}</span>
+                  <span>{barcodeValue !== product.sku ? `${product.sku} (${barcodeValue})` : product.sku}</span>
                   {showPrice && (
                     <span style={{ fontWeight: "bold", fontSize: "7.5pt" }}>
                       ${product.price.toFixed(2)}

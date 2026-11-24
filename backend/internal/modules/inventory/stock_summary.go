@@ -24,10 +24,16 @@ type StockSummaryResponse struct {
 	Sku             string                `json:"sku"`
 	Name            string                `json:"name"`
 	BaseUom         string                `json:"base_uom"`
+	TotalOwned      float64               `json:"total_owned"`
 	TotalOnHand     float64               `json:"total_on_hand"`
 	TotalReserved   float64               `json:"total_reserved"`
 	TotalAvailable  float64               `json:"total_available"`
 	TotalCheckedOut float64               `json:"total_checked_out"`
+	TotalAssigned   float64               `json:"total_assigned"`
+	TotalFaulty     float64               `json:"total_faulty"`
+	TotalInRepair   float64               `json:"total_in_repair"`
+	TotalRepaired   float64               `json:"total_repaired"`
+	TotalScrapped   float64               `json:"total_scrapped"`
 	ReorderLevel    float64               `json:"reorder_level"`
 	BufferStock     float64               `json:"buffer_stock"`
 	StockStatus     string                `json:"stock_status"` // IN_STOCK, LOW_STOCK, BUFFER_ALERT, OUT_OF_STOCK
@@ -136,15 +142,36 @@ func (s *StockMovementService) GetItemStockSummary(ctx context.Context, orgID, i
 		return nil, err
 	}
 
+	var totalAssigned, totalFaulty, totalInRepair, totalRepaired, totalScrapped float64
+	_ = pool.QueryRow(ctx, `
+		SELECT
+			COALESCE((SELECT SUM(a.quantity) FROM asset_assignments a WHERE a.org_id = $1 AND a.asset_id = $2 AND a.returned_at IS NULL), 0)::float8,
+			COALESCE((SELECT SUM(r.quantity) FROM asset_repairs r WHERE r.org_id = $1 AND r.item_id = $2 AND r.status = 'FAULTY'), 0)::float8,
+			COALESCE((SELECT SUM(r.quantity) FROM asset_repairs r WHERE r.org_id = $1 AND r.item_id = $2 AND r.status = 'AT_VENDOR'), 0)::float8,
+			COALESCE((SELECT SUM(r.quantity) FROM asset_repairs r WHERE r.org_id = $1 AND r.item_id = $2 AND r.status = 'REPAIRED'), 0)::float8,
+			COALESCE((SELECT SUM(r.quantity) FROM asset_repairs r WHERE r.org_id = $1 AND r.item_id = $2 AND r.status = 'SCRAPPED'), 0)::float8
+	`, orgID, itemID).Scan(&totalAssigned, &totalFaulty, &totalInRepair, &totalRepaired, &totalScrapped)
+
+	if totalAssigned > totalCheckedOut {
+		totalCheckedOut = totalAssigned
+	}
+	totalOwned := totalOnHand + totalAssigned + totalFaulty + totalInRepair
+
 	return &StockSummaryResponse{
 		ItemID:          itemID,
 		Sku:             sku,
 		Name:            name,
 		BaseUom:         baseUom,
+		TotalOwned:      totalOwned,
 		TotalOnHand:     totalOnHand,
 		TotalReserved:   totalReserved,
 		TotalAvailable:  totalAvailable,
 		TotalCheckedOut: totalCheckedOut,
+		TotalAssigned:   totalAssigned,
+		TotalFaulty:     totalFaulty,
+		TotalInRepair:   totalInRepair,
+		TotalRepaired:   totalRepaired,
+		TotalScrapped:   totalScrapped,
 		ReorderLevel:    reorderLevel,
 		BufferStock:     bufferStock,
 		StockStatus:     stockStatus,

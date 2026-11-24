@@ -1,4 +1,4 @@
-.PHONY: up down logs restart ps sqlc-gen test dev-backend dev-frontend build-frontend
+.PHONY: up down logs restart ps sqlc-gen test test-e2e dev-backend dev-frontend build-frontend
 
 up:
 	docker compose up -d
@@ -30,4 +30,7 @@ sqlc-gen:
 test:
 	cd backend && go test -v ./...
 
-ci: test build-frontend
+test-e2e:
+	node tests/e2e/test_all_features.js
+
+ci: test test-e2e build-frontend

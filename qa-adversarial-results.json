@@ -1,0 +1,97 @@
+﻿{
+  "generated_at": "2026-11-19T12:25:00+05:00",
+  "scope": "Client Office IT portal (Zavare / js3055391@gmail.com) — adversarial API + live UI",
+  "intent": "Try hard to break validation, auth, stock math, RBAC, XSS, and story flows",
+  "summary": {
+    "total": 44,
+    "passed": 40,
+    "failed": 4,
+    "pass_rate": 90.9
+  },
+  "verdict": "MOSTLY PASS — core stock/auth/custody guards hold; 4 real defects found while attacking",
+  "failures": [
+    {
+      "id": "CAT-03",
+      "severity": "Critical",
+      "title": "Negative unit cost accepted",
+      "evidence": "POST /api/v1/items with cost_price=-50 returned 201; stored cost_price=-50.0000 (QA-NEG-66246). Corrupts finance valuation."
+    },
+    {
+      "id": "CAT-04",
+      "severity": "High",
+      "title": "Stored XSS in product name accepted",
+      "evidence": "POST name '<img src=x onerror=alert(1)>XSS Laptop' returned 201; raw HTML stored. React list escapes as text (no img execute), but API/export still carry payload."
+    },
+    {
+      "id": "UI-DASH-01",
+      "severity": "Medium",
+      "title": "Dashboard empty flash / 0 KPIs while catalog has data",
+      "evidence": "Live /dashboard showed Fleet 0 models / Available 0 / No IT items while /products and finance API report 8 SKUs / 144 units. Misleading until async load completes (often stays empty on first paint)."
+    },
+    {
+      "id": "UI-GIVE-01",
+      "severity": "Low",
+      "title": "Give-to-staff allows asset-class items in picker",
+      "evidence": "Stock-out modal product dropdown includes MacBook/Latitude (story says cables/toner only; e-sign path is for returnable assets)."
+    }
+  ],
+  "passed_highlights": [
+    "AUTH-01..08 wrong/empty/SQLi/XSS login, JWT required, forged JWT blocked",
+    "AUTH-09 / SA_TELEMETRY client admin gets 403 on superadmin APIs",
+    "WEB-ADMIN /admin as client redirects to /dashboard (portal boundary)",
+    "STK oversell 422; qty 0/-5 rejected; retail sell 999999 → 422",
+    "Idempotent stock move: duplicate idempotency_key returns same move_id (no double deduct)",
+    "Custody: invalid UUID / missing employee-signature / unknown check-in / bad certificate → 4xx",
+    "Repairs: empty fault/qty0 and qty 999999 rejected; unknown send-vendor rejected",
+    "Finance dossier loads with KPIs (144 owned / 138 store / 5 assigned / 1 faulty / $120.03 repair)",
+    "Invalid finance email rejected",
+    "Duplicate SKU + empty product name rejected",
+    "Unknown item → 404"
+  ],
+  "results": [
+    { "id": "AUTH-01", "area": "Auth", "title": "Wrong password rejected", "pass": true },
+    { "id": "AUTH-02", "area": "Auth", "title": "Empty credentials rejected", "pass": true },
+    { "id": "AUTH-03", "area": "Auth", "title": "SQLi-like email rejected", "pass": true },
+    { "id": "AUTH-04", "area": "Auth", "title": "XSS email rejected", "pass": true },
+    { "id": "AUTH-05", "area": "Auth", "title": "Valid demo login returns JWT", "pass": true },
+    { "id": "AUTH-06", "area": "Auth", "title": "GET /items without token blocked", "pass": true },
+    { "id": "AUTH-07", "area": "Auth", "title": "Forged JWT blocked", "pass": true },
+    { "id": "AUTH-08", "area": "Auth", "title": "GET /auth/me with valid token", "pass": true },
+    { "id": "AUTH-09", "area": "RBAC", "title": "Client token cannot list superadmin orgs", "pass": true },
+    { "id": "AUTH-10", "area": "RBAC", "title": "Client token blocked on superadmin telemetry (403)", "pass": true },
+    { "id": "CAT-01", "area": "Catalog", "title": "List equipment items", "pass": true },
+    { "id": "CAT-02", "area": "Catalog", "title": "Reject create with empty name", "pass": true },
+    { "id": "CAT-03", "area": "Catalog", "title": "Reject negative cost", "pass": false },
+    { "id": "CAT-04", "area": "Catalog", "title": "XSS product name rejected or sanitized", "pass": false },
+    { "id": "CAT-05", "area": "Catalog", "title": "Duplicate SKU rejected", "pass": true },
+    { "id": "CAT-06", "area": "Catalog", "title": "Unknown item id returns 404", "pass": true },
+    { "id": "STK-01", "area": "Stock", "title": "List locations", "pass": true },
+    { "id": "STK-02", "area": "Stock", "title": "Item stock summary loads", "pass": true },
+    { "id": "STK-03", "area": "Stock", "title": "Reject stock-out above available qty", "pass": true },
+    { "id": "STK-04", "area": "Stock", "title": "Reject zero quantity move", "pass": true },
+    { "id": "STK-05", "area": "Stock", "title": "Reject negative quantity move", "pass": true },
+    { "id": "STK-06", "area": "Stock", "title": "Idempotency key prevents double deduct", "pass": true },
+    { "id": "STK-07", "area": "Stock", "title": "Retail oversell blocked", "pass": true },
+    { "id": "CUS-01", "area": "Custody", "title": "List custody assignments", "pass": true },
+    { "id": "CUS-02", "area": "Custody", "title": "Custody summary loads", "pass": true },
+    { "id": "CUS-03", "area": "Custody", "title": "Checkout invalid item UUID rejected", "pass": true },
+    { "id": "CUS-04", "area": "Custody", "title": "Checkout missing employee/signature rejected", "pass": true },
+    { "id": "CUS-05", "area": "Custody", "title": "Check-in unknown assignment rejected", "pass": true },
+    { "id": "CUS-06", "area": "Custody", "title": "Certificate unknown assignment rejected", "pass": true },
+    { "id": "REP-01", "area": "Faulty", "title": "List repair tickets", "pass": true },
+    { "id": "REP-02", "area": "Faulty", "title": "Reject repair qty=0 / empty fault", "pass": true },
+    { "id": "REP-03", "area": "Faulty", "title": "Reject faulty qty above stock", "pass": true },
+    { "id": "REP-04", "area": "Faulty", "title": "Send-to-vendor unknown ticket rejected", "pass": true },
+    { "id": "FIN-01", "area": "Finance", "title": "Finance dossier loads", "pass": true },
+    { "id": "FIN-02", "area": "Finance", "title": "Reject invalid finance email", "pass": true },
+    { "id": "FIN-03", "area": "Finance", "title": "Finance sees inventory when catalog non-empty", "pass": true },
+    { "id": "USR-01", "area": "Staff", "title": "List users/staff", "pass": true },
+    { "id": "USR-02", "area": "Staff", "title": "Reject invalid staff create", "pass": true },
+    { "id": "WEB-01", "area": "Web", "title": "Unauthenticated dashboard gated", "pass": true },
+    { "id": "WEB-02", "area": "Web", "title": "Client /admin does not open SuperAdmin portal", "pass": true },
+    { "id": "UI-XSS-01", "area": "UI", "title": "Stored XSS does not execute as DOM img in products list", "pass": true },
+    { "id": "UI-ADD-01", "area": "UI", "title": "Empty Add equipment blocked by validation", "pass": true },
+    { "id": "UI-DASH-01", "area": "UI", "title": "Dashboard KPIs match live inventory without empty false state", "pass": false },
+    { "id": "UI-GIVE-01", "area": "UI", "title": "Give-to-staff picker limited to consumables", "pass": false }
+  ]
+}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,10 +13,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"whoopit-core/internal/middleware"
 	"whoopit-core/internal/platform/db"
+	"whoopit-core/internal/platform/entitlement"
 	platformHttp "whoopit-core/internal/platform/http"
 )
 
@@ -207,7 +210,7 @@ func (h *Handler) CreateSupplier(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	platformHttp.RespondJSON(w, http.StatusCreated, sup, nil)
+	platformHttp.RespondJSON(w, http.StatusCreated, toSupplierDTO(sup), nil)
 }
 
 func (h *Handler) ListSuppliers(w http.ResponseWriter, r *http.Request) {
@@ -231,7 +234,138 @@ func (h *Handler) ListSuppliers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	platformHttp.RespondJSON(w, http.StatusOK, suppliers, map[string]any{"count": len(suppliers)})
+	out := make([]supplierDTO, 0, len(suppliers))
+	for _, supplier := range suppliers {
+		out = append(out, toSupplierDTO(supplier))
+	}
+	platformHttp.RespondJSON(w, http.StatusOK, out, map[string]any{"count": len(out)})
+}
+
+func (h *Handler) UpdateSupplier(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := middleware.GetTenantID(r.Context())
+	if !ok {
+		platformHttp.RespondProblem(w, r, http.StatusUnauthorized, "Unauthorized", "Tenant context missing", nil)
+		return
+	}
+
+	supplierID, err := uuid.Parse(getParamID(r, "id"))
+	if err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusBadRequest, "Invalid ID", "Invalid supplier ID", nil)
+		return
+	}
+
+	var req CreateSupplierRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusBadRequest, "Bad Request", "Malformed JSON body", nil)
+		return
+	}
+	req.Name = strings.TrimSpace(req.Name)
+	if req.Name == "" {
+		platformHttp.RespondProblem(w, r, http.StatusBadRequest, "Validation Error", "supplier name is required", nil)
+		return
+	}
+
+	var updated db.Supplier
+	err = h.db.WithTenantTx(r.Context(), orgID, func(q *db.Queries) error {
+		if _, err := q.GetSupplierByID(r.Context(), db.GetSupplierByIDParams{
+			SupplierID: supplierID,
+			OrgID:      orgID,
+		}); err != nil {
+			return err
+		}
+		res, err := q.UpdateSupplier(r.Context(), db.UpdateSupplierParams{
+			SupplierID: supplierID,
+			OrgID:      orgID,
+			Name:       req.Name,
+			Phone:      toPgText(req.Phone),
+			Email:      toPgText(req.Email),
+			Address:    toPgText(req.Address),
+			Notes:      toPgText(req.Notes),
+			IsActive:   true,
+		})
+		if err != nil {
+			return err
+		}
+		updated = res
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			platformHttp.RespondProblem(w, r, http.StatusNotFound, "Not Found", "Supplier not found", nil)
+			return
+		}
+		platformHttp.RespondProblem(w, r, http.StatusUnprocessableEntity, "Failed to Update Supplier", err.Error(), nil)
+		return
+	}
+
+	platformHttp.RespondJSON(w, http.StatusOK, toSupplierDTO(updated), nil)
+}
+
+func (h *Handler) DeleteSupplier(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := middleware.GetTenantID(r.Context())
+	if !ok {
+		platformHttp.RespondProblem(w, r, http.StatusUnauthorized, "Unauthorized", "Tenant context missing", nil)
+		return
+	}
+
+	supplierID, err := uuid.Parse(getParamID(r, "id"))
+	if err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusBadRequest, "Invalid ID", "Invalid supplier ID", nil)
+		return
+	}
+
+	err = h.db.WithTenantTx(r.Context(), orgID, func(q *db.Queries) error {
+		current, err := q.GetSupplierByID(r.Context(), db.GetSupplierByIDParams{
+			SupplierID: supplierID,
+			OrgID:      orgID,
+		})
+		if err != nil {
+			return err
+		}
+		_, err = q.UpdateSupplier(r.Context(), db.UpdateSupplierParams{
+			SupplierID: supplierID,
+			OrgID:      orgID,
+			Name:       current.Name,
+			Phone:      current.Phone,
+			Email:      current.Email,
+			Address:    current.Address,
+			Notes:      current.Notes,
+			IsActive:   false,
+		})
+		return err
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			platformHttp.RespondProblem(w, r, http.StatusNotFound, "Not Found", "Supplier not found", nil)
+			return
+		}
+		platformHttp.RespondProblem(w, r, http.StatusUnprocessableEntity, "Failed to Remove Supplier", err.Error(), nil)
+		return
+	}
+
+	platformHttp.RespondJSON(w, http.StatusOK, map[string]any{"removed": true}, nil)
+}
+
+type supplierDTO struct {
+	SupplierID string `json:"supplier_id"`
+	Name       string `json:"name"`
+	Phone      string `json:"phone"`
+	Email      string `json:"email"`
+	Address    string `json:"address"`
+	Notes      string `json:"notes"`
+	IsActive   bool   `json:"is_active"`
+}
+
+func toSupplierDTO(s db.Supplier) supplierDTO {
+	return supplierDTO{
+		SupplierID: s.SupplierID.String(),
+		Name:       s.Name,
+		Phone:      s.Phone.String,
+		Email:      s.Email.String,
+		Address:    s.Address.String,
+		Notes:      s.Notes.String,
+		IsActive:   s.IsActive,
+	}
 }
 
 // ============================================================================
@@ -531,11 +665,23 @@ func (h *Handler) ImportProductsCSV(w http.ResponseWriter, r *http.Request) {
 
 	uomIdx, hasUom := colMap["base_uom"]
 	costIdx, hasCost := colMap["cost_price"]
+	sellingIdx, hasSelling := colMap["selling_price"]
 	reorderIdx, hasReorder := colMap["reorder_level"]
 	bufferIdx, hasBuffer := colMap["buffer_stock"]
 
+	type ValidCSVRow struct {
+		OrgID        uuid.UUID
+		Sku          string
+		Name         string
+		BaseUom      string
+		CostPrice    float64
+		SellingPrice float64
+		ReorderLevel float64
+		BufferStock  float64
+	}
+
 	var rowErrors []RowError
-	var validRows []db.CreateItemParams
+	var validRows []ValidCSVRow
 	rowNum := 1
 
 	for {
@@ -560,15 +706,26 @@ func (h *Handler) ImportProductsCSV(w http.ResponseWriter, r *http.Request) {
 			rowErrors = append(rowErrors, RowError{Row: rowNum, Field: "name", Error: "name cannot be empty"})
 			continue
 		}
+		if catalogTextLooksUnsafe(name) || catalogTextLooksUnsafe(sku) {
+			rowErrors = append(rowErrors, RowError{Row: rowNum, Field: "name", Error: "sku/name must not contain HTML, scripts, or markup"})
+			continue
+		}
 
 		baseUOM := "pcs"
 		if hasUom && len(record) > uomIdx && record[uomIdx] != "" {
 			baseUOM = strings.TrimSpace(record[uomIdx])
 		}
 
-		var costVal, reorderVal, bufferVal float64
+		var costVal, sellingVal, reorderVal, bufferVal float64
 		if hasCost && len(record) > costIdx && record[costIdx] != "" {
 			costVal, _ = strconv.ParseFloat(strings.TrimSpace(record[costIdx]), 64)
+		}
+		if hasSelling && len(record) > sellingIdx && record[sellingIdx] != "" {
+			sellingVal, _ = strconv.ParseFloat(strings.TrimSpace(record[sellingIdx]), 64)
+		}
+		if costVal < 0 || sellingVal < 0 {
+			rowErrors = append(rowErrors, RowError{Row: rowNum, Field: "cost_price", Error: "cost_price and selling_price must be >= 0"})
+			continue
 		}
 		if hasReorder && len(record) > reorderIdx && record[reorderIdx] != "" {
 			reorderVal, _ = strconv.ParseFloat(strings.TrimSpace(record[reorderIdx]), 64)
@@ -577,18 +734,15 @@ func (h *Handler) ImportProductsCSV(w http.ResponseWriter, r *http.Request) {
 			bufferVal, _ = strconv.ParseFloat(strings.TrimSpace(record[bufferIdx]), 64)
 		}
 
-		_ = costVal
-		_ = reorderVal
-		_ = bufferVal
-
-		validRows = append(validRows, db.CreateItemParams{
-			OrgID:           orgID,
-			Sku:             sku,
-			Name:            name,
-			TrackingMode:    "none",
-			BaseUom:         baseUOM,
-			ValuationMethod: "wac",
-			Attributes:      json.RawMessage("{}"),
+		validRows = append(validRows, ValidCSVRow{
+			OrgID:        orgID,
+			Sku:          sku,
+			Name:         name,
+			BaseUom:      baseUOM,
+			CostPrice:    costVal,
+			SellingPrice: sellingVal,
+			ReorderLevel: reorderVal,
+			BufferStock:  bufferVal,
 		})
 	}
 
@@ -604,15 +758,47 @@ func (h *Handler) ImportProductsCSV(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	skus := make([]string, len(validRows))
+	for i, item := range validRows {
+		skus[i] = item.Sku
+	}
+	var existing int
+	if len(skus) > 0 {
+		if err := h.db.Pool().QueryRow(r.Context(), `SELECT COUNT(*) FROM items WHERE org_id = $1 AND sku = ANY($2::text[])`, orgID, skus).Scan(&existing); err != nil {
+			platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "License Check Failed", "Could not verify the workspace item limit.", nil)
+			return
+		}
+	}
+	adding := len(validRows) - existing
+	if adding < 0 {
+		adding = 0
+	}
+	if err := entitlement.CheckAdditionalItems(r.Context(), h.db.Pool(), orgID, adding); err != nil {
+		var pe *entitlement.PlanError
+		if errors.As(err, &pe) {
+			platformHttp.RespondProblem(w, r, pe.HTTPStatus, pe.Title, pe.Detail, nil)
+			return
+		}
+		platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "License Check Failed", "Could not verify the workspace plan.", nil)
+		return
+	}
+
 	// Insert into DB if not dry run and no errors
 	importedCount := 0
 	pool := h.db.Pool()
 	for _, item := range validRows {
 		_, err := pool.Exec(r.Context(), `
-			INSERT INTO items (org_id, sku, name, tracking_mode, base_uom, valuation_method, attributes, is_active)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, true)
-			ON CONFLICT (org_id, sku) DO UPDATE SET name = EXCLUDED.name, is_active = true
-		`, item.OrgID, item.Sku, item.Name, item.TrackingMode, item.BaseUom, item.ValuationMethod, item.Attributes)
+			INSERT INTO items (org_id, sku, name, tracking_mode, base_uom, valuation_method, attributes, cost_price, selling_price, reorder_level, buffer_stock, is_active)
+			VALUES ($1, $2, $3, 'none', $4, 'wac', '{}'::jsonb, $5, $6, $7, $8, true)
+			ON CONFLICT (org_id, sku) DO UPDATE SET 
+				name = EXCLUDED.name, 
+				base_uom = EXCLUDED.base_uom,
+				cost_price = EXCLUDED.cost_price,
+				selling_price = EXCLUDED.selling_price,
+				reorder_level = EXCLUDED.reorder_level,
+				buffer_stock = EXCLUDED.buffer_stock,
+				is_active = true
+		`, item.OrgID, item.Sku, item.Name, item.BaseUom, item.CostPrice, item.SellingPrice, item.ReorderLevel, item.BufferStock)
 		if err == nil {
 			importedCount++
 		}

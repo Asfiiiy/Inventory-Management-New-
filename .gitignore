@@ -45,3 +45,5 @@ frontend/.env*.local
 .idea/
 .DS_Store
 Thumbs.db
+whoopit-api-linux
+backend/whoopit-api-linux

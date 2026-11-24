@@ -1,7 +1,5 @@
-"use client";
-
-import CompaniesPage from "@/app/companies/page";
+import { redirect } from "next/navigation";
 
 export default function SuperAdminPage() {
-  return <CompaniesPage />;
+  redirect("/admin");
 }

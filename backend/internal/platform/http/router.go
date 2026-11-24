@@ -70,8 +70,8 @@ func NewRouter(logger *slog.Logger) *chi.Mux {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
-	// Global rate limiter: 600 req/minute per IP
-	defaultLimiter := NewIPRateLimiter(600, time.Minute)
+	// Global rate limiter: 10,000 req/minute per IP
+	defaultLimiter := NewIPRateLimiter(10000, time.Minute)
 	r.Use(defaultLimiter.Middleware)
 
 	// Root liveness check

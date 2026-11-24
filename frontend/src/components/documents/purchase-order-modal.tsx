@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Printer,
   X,
@@ -43,8 +44,13 @@ interface PurchaseOrderModalProps {
 export function PurchaseOrderModal({ order, isOpen, onClose }: PurchaseOrderModalProps) {
   const [companyName, setCompanyName] = useState("WHOOPIT ENTERPRISE SYSTEMS");
   const [warehouseAddress, setWarehouseAddress] = useState("Central Distribution Warehouse #4, Tech Logistics Hub");
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen || !order) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !order || !mounted) return null;
 
   const handlePrint = () => {
     window.print();
@@ -61,7 +67,7 @@ export function PurchaseOrderModal({ order, isOpen, onClose }: PurchaseOrderModa
     minute: "2-digit",
   });
 
-  return (
+  return createPortal(
     <>
       {/* Interactive Modal UI (Hidden during window.print) */}
       <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150 no-print">
@@ -372,6 +378,7 @@ export function PurchaseOrderModal({ order, isOpen, onClose }: PurchaseOrderModa
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }

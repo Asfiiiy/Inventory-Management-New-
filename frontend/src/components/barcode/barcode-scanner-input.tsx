@@ -6,7 +6,7 @@ import {
   Barcode,
   CheckCircle2,
   AlertCircle,
-  Sparkles,
+
   Volume2,
 } from "lucide-react";
 import { Product } from "@/lib/inventory-store";
@@ -47,12 +47,17 @@ export function BarcodeScannerInput({
       const clean = barcode.trim().toUpperCase();
       if (!clean) return;
 
-      // Match against SKU or Product ID or exact name
+      // Match against SKU, Barcode, Product ID, attributes barcode, or name
       const matched = products.find(
         (p) =>
           p.sku.toUpperCase() === clean ||
+          (p.barcode && p.barcode.toUpperCase() === clean) ||
+          (p.attributes?.barcode && String(p.attributes.barcode).toUpperCase() === clean) ||
           p.id.toUpperCase() === clean ||
-          p.sku.toUpperCase().replace(/[^A-Z0-9]/g, "") === clean.replace(/[^A-Z0-9]/g, "")
+          p.sku.toUpperCase().replace(/[^A-Z0-9]/g, "") === clean.replace(/[^A-Z0-9]/g, "") ||
+          (p.barcode && p.barcode.toUpperCase().replace(/[^A-Z0-9]/g, "") === clean.replace(/[^A-Z0-9]/g, "")) ||
+          (p.attributes?.barcode && String(p.attributes.barcode).toUpperCase().replace(/[^A-Z0-9]/g, "") === clean.replace(/[^A-Z0-9]/g, "")) ||
+          p.name.toUpperCase() === clean
       );
 
       if (matched) {
@@ -168,24 +173,24 @@ export function BarcodeScannerInput({
       </div>
 
       {/* Real-time scanner feedback status */}
-      <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-        <div className="flex items-center gap-1.5 truncate">
+      <div className="mt-2.5 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+        <div className="flex items-center gap-1.5 min-w-0 truncate">
           {lastScanned ? (
             <>
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-              <span>
+              <span className="truncate">
                 Last scanned: <strong className="text-slate-900 dark:text-white">{lastScanned.name}</strong>{" "}
                 (<span className="font-mono">{lastScanned.sku}</span>) at {lastScanned.time}
               </span>
             </>
           ) : (
-            <span>Aim scanner gun at any printed sticker. USB / Bluetooth input auto-detected.</span>
+            <span className="truncate">Aim scanner gun at any printed sticker. USB/Bluetooth auto-detected.</span>
           )}
         </div>
 
         {/* Quick simulation chips if no physical scanner connected */}
         {products.length > 0 && (
-          <div className="hidden sm:flex items-center gap-1 shrink-0">
+          <div className="hidden md:flex items-center gap-1 shrink-0 ml-auto">
             <span className="text-[10px] text-slate-400">Quick Test:</span>
             {products.slice(0, 3).map((p) => (
               <button

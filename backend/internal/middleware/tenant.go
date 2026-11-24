@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/google/uuid"
@@ -22,8 +23,14 @@ const (
 	nameContextKey   contextKey = "auth_name"
 )
 
+func allowInsecureDevAuth() bool {
+	env := strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
+	flag := strings.ToLower(strings.TrimSpace(os.Getenv("ALLOW_DEV_TENANT_HEADER")))
+	return (env == "development" || env == "dev" || env == "local") && (flag == "1" || flag == "true" || flag == "yes")
+}
+
 // TenantMiddleware extracts and verifies the organization tenant UUID and user session.
-// It verifies JWT Bearer tokens first, with a fallback to 'X-Tenant-ID' for development ease.
+// Production requires a valid JWT Bearer token. SuperAdmin may still switch tenant via X-Tenant-ID.
 func TenantMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
@@ -32,7 +39,16 @@ func TenantMiddleware(next http.Handler) http.Handler {
 			claims, err := platformAuth.ParseToken(tokenStr)
 			if err == nil && claims != nil {
 				ctx := r.Context()
-				ctx = context.WithValue(ctx, tenantContextKey, claims.OrgID)
+				orgID := claims.OrgID
+				// Allow SuperAdmin to switch tenant scope via X-Tenant-ID (support preview)
+				if strings.EqualFold(claims.Role, "superadmin") || strings.EqualFold(claims.Email, "admin@whoopit.io") {
+					if tenantHeader := r.Header.Get("X-Tenant-ID"); tenantHeader != "" {
+						if parsedTenant, parseErr := uuid.Parse(tenantHeader); parseErr == nil && parsedTenant != uuid.Nil {
+							orgID = parsedTenant
+						}
+					}
+				}
+				ctx = context.WithValue(ctx, tenantContextKey, orgID)
 				ctx = context.WithValue(ctx, userContextKey, claims.UserID)
 				ctx = context.WithValue(ctx, roleContextKey, claims.Role)
 				ctx = context.WithValue(ctx, emailContextKey, claims.Email)
@@ -41,34 +57,26 @@ func TenantMiddleware(next http.Handler) http.Handler {
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
-
-			// If not a JWT, check if it's a raw UUID (dev token mode)
-			if parsedDevUUID, devErr := uuid.Parse(tokenStr); devErr == nil && parsedDevUUID != uuid.Nil {
-				ctx := r.Context()
-				ctx = context.WithValue(ctx, tenantContextKey, parsedDevUUID)
-				ctx = context.WithValue(ctx, roleContextKey, "admin")
-				next.ServeHTTP(w, r.WithContext(ctx))
-				return
-			}
 		}
 
-		// Fallback check: X-Tenant-ID header
-		tenantStr := r.Header.Get("X-Tenant-ID")
-		if tenantStr != "" {
-			parsedID, err := uuid.Parse(tenantStr)
-			if err == nil && parsedID != uuid.Nil {
-				ctx := r.Context()
-				ctx = context.WithValue(ctx, tenantContextKey, parsedID)
-				ctx = context.WithValue(ctx, roleContextKey, "admin")
-				next.ServeHTTP(w, r.WithContext(ctx))
-				return
+		// Opt-in local-only bypass (never on by default in docker/production).
+		if allowInsecureDevAuth() {
+			tenantStr := r.Header.Get("X-Tenant-ID")
+			if tenantStr != "" {
+				if parsedID, err := uuid.Parse(tenantStr); err == nil && parsedID != uuid.Nil {
+					ctx := r.Context()
+					ctx = context.WithValue(ctx, tenantContextKey, parsedID)
+					ctx = context.WithValue(ctx, roleContextKey, "admin")
+					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				}
 			}
 		}
 
 		platformHttp.RespondProblem(
 			w, r, http.StatusUnauthorized,
 			"Unauthorized: Missing Authentication Session",
-			"A valid 'Authorization: Bearer <token>' or 'X-Tenant-ID' header is required.",
+			"A valid Authorization Bearer JWT is required.",
 			nil,
 		)
 	})
@@ -120,7 +128,6 @@ func GetUserName(ctx context.Context) (string, bool) {
 }
 
 // RequireRole checks whether the user's role is in the allowedRoles list.
-// If not, it rejects the request with HTTP 403 Forbidden.
 func RequireRole(allowedRoles ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -130,9 +137,19 @@ func RequireRole(allowedRoles ...string) func(http.Handler) http.Handler {
 				return
 			}
 
+			canon := platformAuth.CanonicalRole(role)
+			if strings.EqualFold(role, "superadmin") || strings.EqualFold(role, "platform_admin") {
+				canon = "superadmin"
+			}
+
 			allowed := false
 			for _, allowedRole := range allowedRoles {
-				if strings.EqualFold(role, allowedRole) {
+				a := strings.ToLower(strings.TrimSpace(allowedRole))
+				if strings.EqualFold(role, a) || strings.EqualFold(canon, a) {
+					allowed = true
+					break
+				}
+				if a == "admin" && (canon == platformAuth.RoleOwner || strings.EqualFold(role, "admin")) {
 					allowed = true
 					break
 				}
@@ -150,5 +167,17 @@ func RequireRole(allowedRoles ...string) func(http.Handler) http.Handler {
 
 			next.ServeHTTP(w, r)
 		})
+	}
+}
+
+// IsCompanyAdmin reports whether the caller can administer the tenant workspace.
+func IsCompanyAdmin(role string) bool {
+	r := strings.ToLower(strings.TrimSpace(role))
+	switch r {
+	case "admin", "owner", "manager", "superadmin", "platform_admin":
+		return true
+	default:
+		return platformAuth.CanonicalRole(role) == platformAuth.RoleOwner ||
+			platformAuth.CanonicalRole(role) == platformAuth.RoleManager
 	}
 }

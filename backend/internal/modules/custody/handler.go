@@ -3,7 +3,9 @@ package custody
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -12,6 +14,7 @@ import (
 
 	"whoopit-core/internal/middleware"
 	platformHttp "whoopit-core/internal/platform/http"
+	"whoopit-core/internal/platform/mail"
 )
 
 type Handler struct {
@@ -23,14 +26,23 @@ func NewHandler(svc *AssetCustodyService) *Handler {
 }
 
 type CheckOutRequest struct {
-	AssetID            string `json:"asset_id"`
-	EmployeeUserID     string `json:"employee_user_id"`
-	SourceLocationID   string `json:"source_location_id"`
-	ExpectedReturnDate string `json:"expected_return_date,omitempty"`
-	ConditionGrade     string `json:"condition_grade,omitempty"`
+	AssetID            string  `json:"asset_id"`
+	EmployeeUserID     string  `json:"employee_user_id"`
+	SourceLocationID   string  `json:"source_location_id"`
+	ExpectedReturnDate string  `json:"expected_return_date,omitempty"`
+	ConditionGrade     string  `json:"condition_grade,omitempty"`
+	Quantity           float64 `json:"quantity,omitempty"`
+	EmployeeCode       string  `json:"employee_code,omitempty"`
+	EmployeeName       string  `json:"employee_name,omitempty"`
+	EmployeeDepartment string  `json:"employee_department,omitempty"`
+	EmployeeEmail      string  `json:"employee_email,omitempty"`
+	SerialNumber       string  `json:"serial_number,omitempty"`
+	SignatureData      string  `json:"signature_data,omitempty"`
+	Notes              string  `json:"notes,omitempty"`
+	AdminOverride      bool    `json:"admin_override,omitempty"`
 }
 
-// CheckOut assigns an IT asset to an employee and records double-entry movement.
+// CheckOut assigns an IT asset to an employee with Employee ID & Digital Signature.
 func (h *Handler) CheckOut(w http.ResponseWriter, r *http.Request) {
 	orgID, ok := middleware.GetTenantID(r.Context())
 	if !ok {
@@ -76,6 +88,52 @@ func (h *Handler) CheckOut(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	role, _ := middleware.GetUserRole(r.Context())
+	userID, _ := middleware.GetUserID(r.Context())
+	qty := req.Quantity
+	if qty <= 0 {
+		qty = 1
+	}
+	unitCost, _, _, _ := h.service.itemUnitCost(r.Context(), orgID, assetID)
+	threshold := h.service.GetApprovalThreshold(r.Context(), orgID)
+	est := unitCost * qty
+	isAdmin := middleware.IsCompanyAdmin(role)
+
+	// Staff cannot direct-issue — always queue. Admins queue high-value unless override.
+	needsQueue := !isAdmin || (threshold > 0 && est >= threshold && !req.AdminOverride)
+	if needsQueue {
+		if userID == uuid.Nil {
+			platformHttp.RespondProblem(w, r, http.StatusUnauthorized, "Unauthorized", "User context missing", nil)
+			return
+		}
+		pending, qErr := h.service.CreateAssetRequest(r.Context(), CreateRequestInput{
+			OrgID:              orgID,
+			RequesterUserID:    userID,
+			ItemID:             assetID,
+			EmployeeUserID:     empID,
+			SourceLocationID:   &srcLocID,
+			Quantity:           qty,
+			SerialNumber:       req.SerialNumber,
+			RequestType:        "CHECKOUT",
+			Reason:             fmt.Sprintf("Requires approval (est. $%.0f, threshold $%.0f)", est, threshold),
+			Notes:              req.Notes,
+			ConditionGrade:     req.ConditionGrade,
+			ExpectedReturnDate: expDate,
+		})
+		if qErr != nil {
+			platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "Internal Server Error", qErr.Error(), nil)
+			return
+		}
+		platformHttp.RespondJSON(w, http.StatusAccepted, map[string]any{
+			"pending_approval": true,
+			"request":          pending,
+			"threshold":        threshold,
+			"estimated_value":  est,
+			"message":          "Issue queued for admin approval because of role or high asset value.",
+		}, nil)
+		return
+	}
+
 	input := CheckOutInput{
 		OrgID:              orgID,
 		AssetID:            assetID,
@@ -83,6 +141,14 @@ func (h *Handler) CheckOut(w http.ResponseWriter, r *http.Request) {
 		SourceLocationID:   srcLocID,
 		ExpectedReturnDate: expDate,
 		ConditionGrade:     req.ConditionGrade,
+		Quantity:           req.Quantity,
+		EmployeeCode:       req.EmployeeCode,
+		EmployeeName:       req.EmployeeName,
+		EmployeeDepartment: req.EmployeeDepartment,
+		EmployeeEmail:      req.EmployeeEmail,
+		SerialNumber:       req.SerialNumber,
+		SignatureData:      req.SignatureData,
+		Notes:              req.Notes,
 	}
 
 	res, err := h.service.CheckOut(r.Context(), input)
@@ -91,9 +157,9 @@ func (h *Handler) CheckOut(w http.ResponseWriter, r *http.Request) {
 			platformHttp.RespondProblem(
 				w, r, http.StatusConflict,
 				"Asset Deployment Conflict",
-				"Asset is already assigned to another employee",
+				"This specific asset or serial number is already assigned to another employee",
 				[]platformHttp.ValidationErrorDetail{
-					{Field: "asset_id", Message: "active assignment exists for this asset"},
+					{Field: "asset_id", Message: "active assignment exists for this serial/asset"},
 				},
 			)
 			return
@@ -112,6 +178,36 @@ func (h *Handler) CheckOut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if res != nil && strings.Contains(res.Assignment.EmployeeEmail, "@") {
+		loginURL := mail.PublicAppURL() + "/my-assets"
+		html := fmt.Sprintf(`
+			<div style="font-family:Segoe UI,Arial,sans-serif;max-width:560px;color:#0f172a">
+			  <h2 style="color:#0c3843">Hardware issued to you</h2>
+			  <p>Hello %s,</p>
+			  <p><strong>%s</strong> (%s) was issued to you.</p>
+			  <ul>
+			    <li>Serial: %s</li>
+			    <li>Issued: %s</li>
+			  </ul>
+			  <p>View your devices: <a href="%s">%s</a></p>
+			</div>`,
+			res.Assignment.EmployeeName,
+			res.Assignment.AssetName,
+			res.Assignment.AssetSku,
+			func() string {
+				if strings.TrimSpace(res.Assignment.SerialNumber) == "" {
+					return "Not recorded"
+				}
+				return res.Assignment.SerialNumber
+			}(),
+			res.Assignment.CheckoutDate.Format("02 Jan 2006 15:04"),
+			loginURL, loginURL,
+		)
+		text := fmt.Sprintf("Hardware issued: %s (%s)\nSerial: %s\nSee %s\n",
+			res.Assignment.AssetName, res.Assignment.AssetSku, res.Assignment.SerialNumber, loginURL)
+		_, _ = mail.Send(res.Assignment.EmployeeEmail, "Hardware issued: "+res.Assignment.AssetName, html, text)
+	}
+
 	platformHttp.RespondJSON(w, http.StatusCreated, res, nil)
 }
 
@@ -120,9 +216,12 @@ type CheckInRequest struct {
 	ReturnToLocationID string `json:"return_to_location_id"`
 	ConditionGrade     string `json:"condition_grade,omitempty"`
 	Notes              string `json:"notes,omitempty"`
+	ReturnCondition    string `json:"return_condition,omitempty"`
+	IssueDescription   string `json:"issue_description,omitempty"`
+	VendorName         string `json:"vendor_name,omitempty"`
 }
 
-// CheckIn returns an asset from custody back to physical storage.
+// CheckIn returns an asset from custody back to physical storage or marks it Faulty/Under Repair.
 func (h *Handler) CheckIn(w http.ResponseWriter, r *http.Request) {
 	orgID, ok := middleware.GetTenantID(r.Context())
 	if !ok {
@@ -158,6 +257,9 @@ func (h *Handler) CheckIn(w http.ResponseWriter, r *http.Request) {
 		ReturnToLocationID: retLocID,
 		ConditionGrade:     req.ConditionGrade,
 		Notes:              req.Notes,
+		ReturnCondition:    req.ReturnCondition,
+		IssueDescription:   req.IssueDescription,
+		VendorName:         req.VendorName,
 	}
 
 	res, err := h.service.CheckIn(r.Context(), input)
@@ -176,6 +278,23 @@ func (h *Handler) CheckIn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	platformHttp.RespondJSON(w, http.StatusOK, res, nil)
+}
+
+// ListAllAssignments retrieves all active and historical custody assignments for the organization.
+func (h *Handler) ListAllAssignments(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := middleware.GetTenantID(r.Context())
+	if !ok {
+		platformHttp.RespondProblem(w, r, http.StatusUnauthorized, "Unauthorized", "Tenant context missing", nil)
+		return
+	}
+
+	items, err := h.service.ListAllAssignments(r.Context(), orgID)
+	if err != nil {
+		platformHttp.RespondProblem(w, r, http.StatusInternalServerError, "Internal Server Error", err.Error(), nil)
+		return
+	}
+
+	platformHttp.RespondJSON(w, http.StatusOK, items, map[string]interface{}{"count": len(items)})
 }
 
 // ListEmployeeCustody retrieves all active hardware assets deployed to an employee.
